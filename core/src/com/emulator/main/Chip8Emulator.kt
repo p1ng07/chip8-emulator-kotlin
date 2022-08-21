@@ -13,13 +13,11 @@ class Chip8Emulator : ApplicationAdapter() {
     private var memory = IntArray(4096, { _ -> 0 })
     private var v = IntArray(16, { _ -> 0 })
     private var i = 0
-    private var oneSecondTimer = 0.0
+    private var screenPixels = Array(64) { BooleanArray(32) }
+
     private var oneSecondTime = Timer()
     private var delay = 60
     private var sound = 60
-
-    private var test = 0
-    private var timerWork = false
 
     private fun timerReset() {
         this.oneSecondTime =
@@ -31,10 +29,8 @@ class Chip8Emulator : ApplicationAdapter() {
                         {
                             delay--
                             sound--
-                            test++
                             if (delay == -1) delay = 60
                             if (sound == -1) sound = 60
-                            println("A second has passed: $test")
                         }
                 )
     }
@@ -46,7 +42,6 @@ class Chip8Emulator : ApplicationAdapter() {
     /* TO FILL */
     override public fun create() {
         timerReset()
-        println(this.test)
     }
 
     override public fun render() {
