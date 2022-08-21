@@ -1,8 +1,8 @@
-package com.emulator.main.DesktopLauncher
+package com.emulator.main
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration
-import com.emulator.main.Chip8Emulator.Chip8Emulator
+import com.emulator.main.Chip8Emulator
 
 object DesktopLauncher {
     @JvmStatic
