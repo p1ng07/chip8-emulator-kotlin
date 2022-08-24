@@ -106,9 +106,14 @@ class Chip8Emulator : ApplicationAdapter() {
 
     private fun executeOpCode(array: Array<Int>) {
 
-        when (array[0]) {
+        val first = array[0]
+        val second = array[1]
+        val third = array[2]
+        val fourth = array[3]
+
+        when (first) {
             0 ->
-                    if (array[3] == 0xE) {
+                    if (fourth == 0xE) {
                         pc = stack.firstElement()
                         stack.remove(0)
                     } else screenPixels = Array(64) { BooleanArray(32, { _ -> false }) }
@@ -117,26 +122,26 @@ class Chip8Emulator : ApplicationAdapter() {
                 stack.add(pc)
                 pc = nibblesToInt(array, 3).toInt()
             }
-            3 -> if (v[array[1]].equals(nibblesToInt(array, 2))) pc += 2
-            4 -> if (!v[array[1]].equals(nibblesToInt(array, 2))) pc += 2
-            5 -> if (v[array[1]].equals(v[array[2]])) pc += 2
-            6 -> v[array[1]] = nibblesToInt(array, 2).toUByte()
-            7 -> v[array[1]] = v[array[1]].plus(nibblesToInt(array, 2)).toUByte()
+            3 -> if (v[second].equals(nibblesToInt(array, 2))) pc += 2
+            4 -> if (!v[second].equals(nibblesToInt(array, 2))) pc += 2
+            5 -> if (v[second].equals(v[third])) pc += 2
+            6 -> v[second] = nibblesToInt(array, 2).toUByte()
+            7 -> v[second] = v[second].plus(nibblesToInt(array, 2)).toUByte()
             8 ->
-                    when (array[3]) {
-                        0 -> v[array[1]] = v[array[2]]
-                        1 -> v[array[1]] = v[array[1]].or(v[array[2])
-                        2 -> v[array[1]] = v[array[1]].and(v[array[2])
-                        3 -> v[array[1]] = v[array[1]].xor(v[array[2])
+                    when (fourth) {
+                        0 -> v[second] = v[third]
+                        1 -> v[second] = v[second].or(v[third])
+                        2 -> v[second] = v[second].and(v[third])
+                        3 -> v[second] = v[second].xor(v[third])
                         4 -> {
-                            v[array[1]] = v[array[1]].plus(v[array[2]]).toUByte()
-                            if(v[array[1]].toInt() + v[array[2]].toInt() > 255) v[15] = 0xffu
+                            if (v[second].plus(v[third]) > 255u) v[15] = 0xffu
+                            v[second] = v[second].plus(v[third]).toUByte()
                         }
                         5 -> {
-                            v[array[1]] = v[array[1]].plus(v[array[2]]).toUByte()
-                            if(v[array[1]].toInt() + v[array[2]].toInt() > 255) v[15] = 0xffu else v[15] = 0u
+                            v[15] = if (v[second] > v[third]) 0xffu else 0u
+
+                            v[second] = v[second].minus(v[third]).toUByte()
                         }
-                        
                     }
             9 -> 0
         }
