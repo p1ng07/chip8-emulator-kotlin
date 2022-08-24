@@ -48,7 +48,6 @@ class Chip8Emulator : ApplicationAdapter() {
         // Implement a full machine restart for dynamic rom selection
         // restartEmulator()
         loadRomToMemory()
-        for (i in fetchCurrentCommand()) println(i)
     }
 
     // We want to execute about 600-1000 opcodes per second, so 15 per timer tick
@@ -145,8 +144,11 @@ class Chip8Emulator : ApplicationAdapter() {
                             v[15] = if (v[second].toInt() % 2 == 1) 0xffu else 0u
                             v[second] = v[second].div(2u).toUByte()
                         }
+                        7 -> {
+                            v[15] = if (v[third] > v[second]) 0xffu else 0u
+                            v[second] = v[third].minus(v[second]).toUByte()
+                        }
                     }
-            9 -> 0
         }
     }
 
