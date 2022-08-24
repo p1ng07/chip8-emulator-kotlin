@@ -121,9 +121,24 @@ class Chip8Emulator : ApplicationAdapter() {
             4 -> if (!v[array[1]].equals(nibblesToInt(array, 2))) pc += 2
             5 -> if (v[array[1]].equals(v[array[2]])) pc += 2
             6 -> v[array[1]] = nibblesToInt(array, 2).toUByte()
-            7 -> v[array[1]].plus(nibblesToInt(array, 2))
-            8 -> v[array[1]] = v[array[2]]
-            9 ->
+            7 -> v[array[1]] = v[array[1]].plus(nibblesToInt(array, 2)).toUByte()
+            8 ->
+                    when (array[3]) {
+                        0 -> v[array[1]] = v[array[2]]
+                        1 -> v[array[1]] = v[array[1]].or(v[array[2])
+                        2 -> v[array[1]] = v[array[1]].and(v[array[2])
+                        3 -> v[array[1]] = v[array[1]].xor(v[array[2])
+                        4 -> {
+                            v[array[1]] = v[array[1]].plus(v[array[2]]).toUByte()
+                            if(v[array[1]].toInt() + v[array[2]].toInt() > 255) v[15] = 0xffu
+                        }
+                        5 -> {
+                            v[array[1]] = v[array[1]].plus(v[array[2]]).toUByte()
+                            if(v[array[1]].toInt() + v[array[2]].toInt() > 255) v[15] = 0xffu else v[15] = 0u
+                        }
+                        
+                    }
+            9 -> 0
         }
     }
 
