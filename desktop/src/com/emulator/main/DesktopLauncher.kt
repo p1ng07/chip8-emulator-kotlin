@@ -8,10 +8,10 @@ object DesktopLauncher {
     @JvmStatic
     fun main(arg: Array<String>) {
         val config = Lwjgl3ApplicationConfiguration()
-        config.setTitle("Shit")
         config.setTitle("Chip 8 emulator")
         config.setResizable(false)
         val yes = Chip8Emulator.screenData
+        config.setForegroundFPS(yes.FPS)
 
         config.setWindowedMode(
                 yes.GAME_X_OFFSET + 64 * yes.SIZE_OF_SQUARE_IN_PIXELS,
