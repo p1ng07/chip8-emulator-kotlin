@@ -139,8 +139,11 @@ class Chip8Emulator : ApplicationAdapter() {
                         }
                         5 -> {
                             v[15] = if (v[second] > v[third]) 0xffu else 0u
-
                             v[second] = v[second].minus(v[third]).toUByte()
+                        }
+                        6 -> {
+                            v[15] = if (v[second].toInt() % 2 == 1) 0xffu else 0u
+                            v[second] = v[second].div(2).toUByte()
                         }
                     }
             9 -> 0
