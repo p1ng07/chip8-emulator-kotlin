@@ -5,6 +5,7 @@ import java.util.Timer
 import java.util.Vector
 import kotlin.concurrent.timer
 import kotlin.math.*
+import kotlin.random.Random
 
 // Handles the opcode extraction and execution, as well as simulates one cpu tick
 @ExperimentalUnsignedTypes
@@ -22,7 +23,7 @@ class Cpu() {
     private var stack = Vector<Int>()
     private var memory = UByteArray(4096)
     private var v = UByteArray(16)
-    private var i = 0
+    private var I = 0
 
     public var screenPixels = Array(64) { BooleanArray(32, { _ -> false }) }
 
@@ -68,7 +69,7 @@ class Cpu() {
                             v[second] = v[second].minus(v[third]).toUByte()
                         }
                         6 -> {
-                            v[15] = if (v[second].toInt() % 2 == 1) 0xffu else 0u
+                            v[15] = if (v[second].rem(2u).equals(1)) 0xffu else 0u
                             v[second] = v[second].div(2u).toUByte()
                         }
                         7 -> {
@@ -80,6 +81,10 @@ class Cpu() {
                             v[second] = v[second].times(2u).toUByte()
                         }
                     }
+            9 -> if (v[second].equals(v[third])) pc += 2
+            0xA -> this.I = nibblesToInt(array, 3).toInt()
+            0xB -> pc = (nibblesToInt(array, 3) + v[0]).toInt()
+            0xC -> v[second] = nibblesToInt(array, 2).and(Random.nextBits(8).toUInt()).toUByte()
         }
     }
 
