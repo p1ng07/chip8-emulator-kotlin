@@ -1,11 +1,14 @@
 package com.emulator.main
 
+import com.badlogic.gdx.Gdx
 import java.io.File
 import java.util.Timer
 import java.util.Vector
 import kotlin.concurrent.timer
 import kotlin.math.*
 import kotlin.random.Random
+
+data class Vector2Int(var x: Int, var y: Int)
 
 // Handles the opcode extraction and execution, as well as simulates one cpu tick
 @ExperimentalUnsignedTypes
@@ -25,10 +28,20 @@ class Cpu() {
     private var v = UByteArray(16)
     private var I = 0
 
-    public var screenPixels = Array(64) { BooleanArray(32, { _ -> false }) }
+    private var screen = Screen()
 
     public fun tick() {
-        // for (i in 1..screenData.FPS / CPU_FREQUENCY) executeOpCode(fetchCurrentCommand())
+        // for (i in 1..(CPU_FREQUENCY / Chip8Emulator.screenData.FPS)) {
+        Gdx.app.log("Start", "")
+        Gdx.app.log(
+                "fetch",
+                "${fetchCurrentCommand()[0]}${fetchCurrentCommand()[1]}${fetchCurrentCommand()[2]}${fetchCurrentCommand()[3]}}"
+        )
+        Gdx.app.log("End", "")
+
+        executeOpCode(fetchCurrentCommand())
+        pc += 2
+        // }
     }
 
     private fun executeOpCode(array: Array<Int>) {
@@ -39,11 +52,12 @@ class Cpu() {
         val fourth = array[3]
 
         when (first) {
-            0 ->
-                    if (fourth == 0xE) {
-                        pc = stack.firstElement()
-                        stack.remove(0)
-                    } else screenPixels = Array(64) { BooleanArray(32, { _ -> false }) }
+            0 -> {
+                if (fourth == 0xE && third == 0xE) {
+                    pc = stack.firstElement()
+                    stack.remove(0)
+                } else screenPixels = Array(64) { BooleanArray(32, { _ -> false }) }
+            }
             1 -> pc = nibblesToInt(array, 3).toInt()
             2 -> {
                 stack.add(pc)
@@ -85,6 +99,31 @@ class Cpu() {
             0xA -> this.I = nibblesToInt(array, 3).toInt()
             0xB -> pc = (nibblesToInt(array, 3) + v[0]).toInt()
             0xC -> v[second] = nibblesToInt(array, 2).and(Random.nextBits(8).toUInt()).toUByte()
+            // Draw sprite DXYN
+            0xD -> drawSpriteAtXY(second, third, fourth)
+        }
+    }
+
+    // Search for DXYN chip-8 instruction
+    // TODO
+    private fun drawSpriteAtXY(x: Int, y: Int, n: Int) {
+        // Read n bytes from memory starting at adress I
+        val sprites = memory.copyOfRange(this.I, this.I + n)
+
+        // Represents the pixel to draw
+        var point = Vector2Int(x, y)
+
+        // Iterate through every sprite
+        for (sprite in sprites) {
+            // Iterate through every bit of every sprite starting at the most significant bit
+            var xor = false
+            for (i in 7 downTo 0) {
+                var bit = if ((sprite.toInt() shr i).and(1) == 1) true else false
+                if (!xor) if (screenPixels[point.x][point.y].and(bit)) xor = true
+                screenPixels[point.x][point.y] = screenPixels[point.x][point.y].xor(bit)
+                point.x++
+            }
+            point.y++
         }
     }
 
@@ -106,8 +145,17 @@ class Cpu() {
         return res
     }
 
-    // Returns the nibbles of the command in memory at index pc
-    // These numbers are also stored Big-Endian (the most significant bit is on the right)
+    // Fetches the next 2 Bytes at pc and divides them into nibbles
+    // ----
+    // A nibble is an integer that represents a 4 bit number
+    // Example:
+    // If a byte is 0001 1111
+    // Then this Byte has two nibble: 1 and 15
+    // ----
+    // This nibbles are stored Big-Endian
+    // The first nibble of the first Byte is array[0]
+    // The second nibble of the first Byte is array[1]
+    // And so forth
     private fun fetchCurrentCommand(): Array<Int> {
         val array = Array<Int>(4, { _ -> 0 })
         array[0] = memory.get(pc).and(0xF0.toUByte()).toInt() shr 4
