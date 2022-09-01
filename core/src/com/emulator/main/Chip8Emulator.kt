@@ -1,20 +1,25 @@
 package com.emulator.main
 
 import com.badlogic.gdx.ApplicationAdapter
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType
+import com.badlogic.gdx.utils.Logger
 import com.badlogic.gdx.utils.ScreenUtils
 
 @ExperimentalUnsignedTypes
 class Chip8Emulator : ApplicationAdapter() {
 
     object screenData {
-        const val FPS = 60
+        const val FPS = 1
         const val GAME_X_OFFSET = 150
         const val SIZE_OF_SQUARE_IN_PIXELS = 15
     }
 
+    // TODO: Sprites??? Display????
+    // TODO: Figure out how to test the already implemented opcodes
+    // TODO:
     // TODO: Make choosing a new game interactive
     private var romFileName = "roms/picture.ch8"
 
@@ -24,6 +29,7 @@ class Chip8Emulator : ApplicationAdapter() {
         // Implement a full machine restart for dynamic rom selection
         // restartEmulator()
         cpu.loadRomToMemory(romFileName)
+        Gdx.app.setLogLevel(Logger.INFO)
     }
 
     override public fun render() {
@@ -36,19 +42,19 @@ class Chip8Emulator : ApplicationAdapter() {
     private fun drawScreen() {
         val shapeRenderer = ShapeRenderer()
         shapeRenderer.begin(ShapeType.Filled)
-        shapeRenderer.setColor(Color.CORAL)
+        shapeRenderer.setColor(Color.BLACK)
         for (col in cpu.screenPixels.indices) {
             for (row in cpu.screenPixels[col].indices) {
-                if (cpu.screenPixels[col][row]) {
+                if (cpu.screenPixels[col][row]) shapeRenderer.setColor(Color.CORAL)
+                else shapeRenderer.setColor(Color.BLACK)
 
-                    shapeRenderer.rect(
-                            (screenData.GAME_X_OFFSET + screenData.SIZE_OF_SQUARE_IN_PIXELS * col)
-                                    .toFloat(),
-                            (screenData.SIZE_OF_SQUARE_IN_PIXELS * row).toFloat(),
-                            (screenData.SIZE_OF_SQUARE_IN_PIXELS).toFloat(),
-                            (screenData.SIZE_OF_SQUARE_IN_PIXELS).toFloat()
-                    )
-                }
+                shapeRenderer.rect(
+                        (screenData.GAME_X_OFFSET + screenData.SIZE_OF_SQUARE_IN_PIXELS * col)
+                                .toFloat(),
+                        (screenData.SIZE_OF_SQUARE_IN_PIXELS * row).toFloat(),
+                        (screenData.SIZE_OF_SQUARE_IN_PIXELS).toFloat(),
+                        (screenData.SIZE_OF_SQUARE_IN_PIXELS).toFloat()
+                )
             }
         }
         shapeRenderer.end()
