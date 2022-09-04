@@ -10,8 +10,8 @@ class Screen() {
         const val FPS = 15
         const val GAME_X_OFFSET = 150
         const val SIZE_OF_SQUARE_IN_PIXELS = 15
-        const val ROWS = 64
-        const val COLS = 32
+        const val ROWS = 32
+        const val COLS = 64
     }
 
     val GAME_BG_COLOR = Color.BLACK
@@ -28,13 +28,13 @@ class Screen() {
     public fun setPixel(x: Int, y: Int, p: Boolean) {
         if (x >= data.COLS || x < 0 || y >= data.ROWS || y < 0) return
 
-        pixels[x][data.COLS - y - 1] = p.xor(pixels[x][data.COLS - y - 1])
+        pixels[data.ROWS - y - 1][x] = p.xor(pixels[data.ROWS - y - 1][x])
     }
 
     public fun getPixels(x: Int, y: Int): Boolean {
         if (x >= data.COLS || x < 0 || y >= data.ROWS || y < 0) {
             throw Exception("getPixels() in Screen.kt, overflow or underflow of parameters")
-        } else return pixels[x][data.COLS - y - 1]
+        } else return pixels[data.ROWS - y - 1][x]
     }
 
     public fun draw() {
@@ -42,9 +42,9 @@ class Screen() {
         shapeRenderer.begin(ShapeType.Filled)
         shapeRenderer.setColor(GAME_BG_COLOR)
 
-        for (col in pixels.indices) {
-            for (row in pixels[col].indices) {
-                if (pixels[col][row]) shapeRenderer.setColor(GAME_FG_COLOR)
+        for (row in pixels.indices) {
+            for (col in pixels[row].indices) {
+                if (pixels[row][col]) shapeRenderer.setColor(GAME_FG_COLOR)
                 else shapeRenderer.setColor(GAME_BG_COLOR)
 
                 shapeRenderer.rect(
