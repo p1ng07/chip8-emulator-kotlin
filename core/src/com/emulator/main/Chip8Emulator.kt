@@ -13,7 +13,7 @@ class Chip8Emulator : ApplicationAdapter() {
     // TODO: Figure out how to test the already implemented opcodes
     // TODO:
     // TODO: Make choosing a new game interactive
-    private var romFileName = "roms/picture.ch8"
+    private var romFileName = "roms/test.ch8"
 
     private var cpu = Cpu()
 
@@ -25,7 +25,7 @@ class Chip8Emulator : ApplicationAdapter() {
     }
 
     override public fun render() {
-        ScreenUtils.clear(Color.BLACK)
+        ScreenUtils.clear(Color.YELLOW)
         cpu.tick()
         cpu.drawScreen()
     }

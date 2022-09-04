@@ -7,12 +7,17 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType
 class Screen() {
 
     public object data {
-        const val FPS = 1
+        const val FPS = 10
         const val GAME_X_OFFSET = 150
         const val SIZE_OF_SQUARE_IN_PIXELS = 15
         const val ROWS = 64
         const val COLS = 32
     }
+
+    val GAME_BG_COLOR = Color.BLACK
+    val GAME_FG_COLOR = Color.WHITE
+    val BG_COLOR = Color.YELLOW
+
     private var pixels = Array(data.ROWS) { BooleanArray(data.COLS, { _ -> false }) }
 
     public fun resetPixels() {
@@ -35,11 +40,12 @@ class Screen() {
     public fun draw() {
         val shapeRenderer = ShapeRenderer()
         shapeRenderer.begin(ShapeType.Filled)
-        shapeRenderer.setColor(Color.BLACK)
+        shapeRenderer.setColor(GAME_BG_COLOR)
+
         for (col in pixels.indices) {
             for (row in pixels[col].indices) {
-                if (pixels[col][row]) shapeRenderer.setColor(Color.CORAL)
-                else shapeRenderer.setColor(Color.BLACK)
+                if (pixels[col][row]) shapeRenderer.setColor(GAME_FG_COLOR)
+                else shapeRenderer.setColor(GAME_BG_COLOR)
 
                 shapeRenderer.rect(
                         (data.GAME_X_OFFSET + data.SIZE_OF_SQUARE_IN_PIXELS * col).toFloat(),

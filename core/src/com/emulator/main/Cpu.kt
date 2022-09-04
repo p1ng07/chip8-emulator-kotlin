@@ -61,8 +61,8 @@ class Cpu() {
                 stack.add(0, pc)
                 pc = nibblesToInt(array, 3).toInt()
             }
-            3 -> if (v[second].equals(nibblesToInt(array, 2))) pc += 2
-            4 -> if (!v[second].equals(nibblesToInt(array, 2))) pc += 2
+            3 -> if (v[second] == nibblesToInt(array, 2).toUByte()) pc += 2
+            4 -> if (v[second].compareTo(nibblesToInt(array, 2)) != 0) pc += 2
             5 -> if (v[second].equals(v[third])) pc += 2
             6 -> v[second] = nibblesToInt(array, 2).toUByte()
             7 -> v[second] = v[second].plus(nibblesToInt(array, 2)).toUByte()
@@ -93,7 +93,7 @@ class Cpu() {
                             v[second] = v[second].times(2u).toUByte()
                         }
                     }
-            9 -> if (v[second].equals(v[third])) pc += 2
+            9 -> if (v[second].toInt() != v[third].toInt()) pc += 2
             0xA -> this.I = nibblesToInt(array, 3).toInt()
             0xB -> pc = (nibblesToInt(array, 3) + v[0]).toInt()
             0xC -> v[second] = nibblesToInt(array, 2).and(Random.nextBits(8).toUInt()).toUByte()
@@ -105,16 +105,17 @@ class Cpu() {
     // Search for DXYN chip-8 instruction
     // TODO
     private fun drawSpriteAtXY(x: Int, y: Int, n: Int) {
-        // Read n bytes from memory starting at adress I
-        val sprites = memory.copyOfRange(this.I, this.I + n)
-
         // Represents the pixel to draw
-        var point = Vector2Int(x, y)
+        var point =
+                Vector2Int(
+                        v[x].toInt().rem(Screen.data.COLS - 1),
+                        v[y].toInt().rem(Screen.data.ROWS - 1)
+                )
 
         // VF (v[15]) is used if the any sprite has collided
         v[15] = 0u
 
-        for (sprite in sprites) {
+        for (sprite in memory.copyOfRange(this.I, this.I + n)) {
 
             // Iterate through every bit of every sprite starting at the most significant bit
             for (i in 7 downTo 0) {
@@ -130,17 +131,16 @@ class Cpu() {
 
                 point.x++
 
-                // If the coordinate of the pixel to set is outside of display, it wraps around to
-                // the other side
-                if (point.x >= Screen.data.COLS) point.x = 0
+                // If the coordinate of the pixel to set is outside of display, it stops drawing the
+                // current sprite
+                if (point.x >= Screen.data.COLS) break
             }
             // Reset the x coord
-            point.x = x
+            point.x = v[x].toInt().rem(Screen.data.COLS - 1)
             point.y++
 
-            // If the coordinate of the pixel to set is outside of display, it wraps around to the
-            // other side
-            if (point.y >= Screen.data.ROWS) point.y = 0
+            // If the coordinate of the pixel to set is outside of display, it stops drawing
+            if (point.y >= Screen.data.ROWS) break
         }
     }
 
