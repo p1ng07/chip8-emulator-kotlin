@@ -7,7 +7,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType
 class Screen() {
 
     public object data {
-        const val FPS = 10
+        const val FPS = 15
         const val GAME_X_OFFSET = 150
         const val SIZE_OF_SQUARE_IN_PIXELS = 15
         const val ROWS = 64

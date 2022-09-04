@@ -9,11 +9,7 @@ import com.badlogic.gdx.utils.ScreenUtils
 @ExperimentalUnsignedTypes
 class Chip8Emulator : ApplicationAdapter() {
 
-    // TODO: Sprites??? Display????
-    // TODO: Figure out how to test the already implemented opcodes
-    // TODO:
-    // TODO: Make choosing a new game interactive
-    private var romFileName = "roms/picture.ch8"
+    private var romFileName = "roms/test.ch8"
 
     private var cpu = Cpu()
 

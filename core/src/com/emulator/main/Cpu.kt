@@ -65,10 +65,10 @@ class Cpu() {
                 pc = nibblesToInt(array, 3).toInt()
             }
             3 -> if (v[second] == nibblesToInt(array, 2).toUByte()) pc += 2
-            4 -> if (v[second].compareTo(nibblesToInt(array, 2)) != 0) pc += 2
-            5 -> if (v[second].equals(v[third])) pc += 2
+            4 -> if (v[second].toUInt() != nibblesToInt(array, 2)) pc += 2
+            5 -> if (v[second] == v[third]) pc += 2
             6 -> v[second] = nibblesToInt(array, 2).toUByte()
-            7 -> v[second] = v[second].plus(nibblesToInt(array, 2)).toUByte()
+            7 -> v[second] = (v[second] + nibblesToInt(array, 2)).toUByte()
             8 ->
                     when (fourth) {
                         0 -> v[second] = v[third]
@@ -76,7 +76,7 @@ class Cpu() {
                         2 -> v[second] = v[second].and(v[third])
                         3 -> v[second] = v[second].xor(v[third])
                         4 -> {
-                            if (v[second].plus(v[third]) > 255u) v[15] = VF_CARRY_ON
+                            if (v[second] + v[third] > 255u) v[15] = VF_CARRY_ON
                             v[second] = v[second].plus(v[third]).toUByte()
                         }
                         5 -> {
@@ -100,13 +100,38 @@ class Cpu() {
             0xA -> this.I = nibblesToInt(array, 3).toInt()
             0xB -> pc = (nibblesToInt(array, 3) + v[0]).toInt()
             0xC -> v[second] = nibblesToInt(array, 2).and(Random.nextBits(8).toUInt()).toUByte()
-            // Draw sprite DXYN
             0xD -> drawSpriteAtXY(second, third, fourth)
-            // 0xE ->
+            0xE -> println("Key commands, TODO")
             // when(fourth){
             //     0x1
             //     0xE ->
             // }
+            0xF ->
+                    when (fourth) {
+                        7 -> v[second] = delay.toUByte()
+                        0xA -> println("TODO Await for a key press")
+                        5 -> delay = v[second].toInt()
+                        8 -> sound = v[second].toInt()
+                        0xE -> I += v[second].toInt()
+                        9 ->
+                                println(
+                                        "TODO set I to the location in memory of sprite data for digit v[second]"
+                                )
+                        3 ->
+                                println(
+                                        "TODO store the BCD representation of v[second] in I, I+1 and I+2"
+                                )
+                        else -> {
+                            when (third) {
+                                5 ->
+                                        for (i in v.copyOfRange(0, second).indices) memory[I + i] =
+                                                v[i].toInt()
+                                6 ->
+                                        for (i in v.copyOfRange(0, second).indices) v[i] =
+                                                memory[I + i].toUByte()
+                            }
+                        }
+                    }
             else ->
                     Gdx.app.error(
                             "ERROR",
@@ -119,11 +144,7 @@ class Cpu() {
     // TODO
     private fun drawSpriteAtXY(x: Int, y: Int, n: Int) {
         // Represents the pixel to draw
-        var point =
-                Vector2Int(
-                        v[x].toInt().rem(Screen.data.COLS - 1),
-                        v[y].toInt().rem(Screen.data.ROWS - 1)
-                )
+        var point = Vector2Int(v[x].toInt().rem(63), v[y].toInt().rem(31))
 
         // VF (v[15]) is used if the any sprite has collided
         v[15] = VF_CARRY_OFF
@@ -138,7 +159,7 @@ class Cpu() {
 
                 screen.setPixel(point.x, point.y, bit)
 
-                if (v[15].equals(VF_CARRY_OFF)) {
+                if (v[15] == VF_CARRY_OFF) {
                     if (screen.getPixels(point.x, point.y) != oldBit) v[15] = VF_CARRY_ON
                 }
 
