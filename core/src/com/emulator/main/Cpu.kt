@@ -24,7 +24,7 @@ class Cpu() {
     private val PC_START = 0x200
     private var pc = PC_START
     private var stack = Vector<Int>()
-    private var memory = UByteArray(4096)
+    private var memory = IntArray(4096)
     private var v = UByteArray(16)
     private var I = 0
 
@@ -151,7 +151,7 @@ class Cpu() {
 
     public fun loadRomToMemory(romFileName: String) {
         File(romFileName).readBytes().toUByteArray().forEachIndexed { index: Int, element: UByte ->
-            memory[index + PC_START] = element
+            memory[index + PC_START] = element.toInt()
         }
     }
 
@@ -181,10 +181,10 @@ class Cpu() {
     // And so forth
     private fun fetchCurrentCommand(): Array<Int> {
         val array = Array<Int>(4, { _ -> 0 })
-        array[0] = memory.get(pc).and(0xF0.toUByte()).toInt() shr 4
-        array[1] = memory.get(pc).and(0x0F.toUByte()).toInt()
-        array[2] = memory.get(pc + 1).and(0xF0.toUByte()).toInt() shr 4
-        array[3] = memory.get(pc + 1).and(0x0F.toUByte()).toInt()
+        array[0] = memory.get(pc).and(0xF0) /*.and(0xF0)*/ shr 4
+        array[1] = memory.get(pc).and(0x0F)
+        array[2] = memory.get(pc + 1).and(0xF0) shr 4
+        array[3] = memory.get(pc + 1).and(0x0F)
         return array
     }
 
