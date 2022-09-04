@@ -28,13 +28,16 @@ class Cpu() {
     private var v = UByteArray(16)
     private var I = 0
 
+    private var VF_CARRY_ON: UByte = 1u
+    private var VF_CARRY_OFF: UByte = 0u
+
     private var screen = Screen()
 
     public fun tick() {
         // for (i in 1..(CPU_FREQUENCY / Screen.data.FPS)) {
         Gdx.app.log(
                 "fetch",
-                "${fetchCurrentCommand()[0]} ${fetchCurrentCommand()[1]} ${fetchCurrentCommand()[2]} ${fetchCurrentCommand()[3]}}"
+                "${fetchCurrentCommand()[0].toString(16)}${fetchCurrentCommand()[1].toString(16)}${fetchCurrentCommand()[2].toString(16)}${fetchCurrentCommand()[3].toString(16)}}"
         )
 
         executeOpCode(fetchCurrentCommand())
@@ -73,23 +76,23 @@ class Cpu() {
                         2 -> v[second] = v[second].and(v[third])
                         3 -> v[second] = v[second].xor(v[third])
                         4 -> {
-                            if (v[second].plus(v[third]) > 255u) v[15] = 0xffu
+                            if (v[second].plus(v[third]) > 255u) v[15] = VF_CARRY_ON
                             v[second] = v[second].plus(v[third]).toUByte()
                         }
                         5 -> {
-                            v[15] = if (v[second] > v[third]) 1u else 0u
+                            v[15] = if (v[second] > v[third]) VF_CARRY_ON else VF_CARRY_OFF
                             v[second] = v[second].minus(v[third]).toUByte()
                         }
                         6 -> {
-                            v[15] = if (v[second].rem(2u).equals(1)) 1u else 0u
+                            v[15] = if (v[second].rem(2u).equals(1)) VF_CARRY_ON else VF_CARRY_OFF
                             v[second] = v[second].div(2u).toUByte()
                         }
                         7 -> {
-                            v[15] = if (v[third] > v[second]) 1u else 0u
+                            v[15] = if (v[third] > v[second]) VF_CARRY_ON else VF_CARRY_OFF
                             v[second] = v[third].minus(v[second]).toUByte()
                         }
                         0xe -> {
-                            v[15] = if (v[second] >= 128u) 1u else 0u
+                            v[15] = if (v[second] >= 128u) VF_CARRY_ON else VF_CARRY_OFF
                             v[second] = v[second].times(2u).toUByte()
                         }
                     }
@@ -99,6 +102,16 @@ class Cpu() {
             0xC -> v[second] = nibblesToInt(array, 2).and(Random.nextBits(8).toUInt()).toUByte()
             // Draw sprite DXYN
             0xD -> drawSpriteAtXY(second, third, fourth)
+            // 0xE ->
+            // when(fourth){
+            //     0x1
+            //     0xE ->
+            // }
+            else ->
+                    Gdx.app.error(
+                            "ERROR",
+                            "Unknown instruction: ${first.toString(16)}${second.toString(16)}${third.toString(16)}${fourth.toString(16)}}"
+                    )
         }
     }
 
@@ -113,7 +126,7 @@ class Cpu() {
                 )
 
         // VF (v[15]) is used if the any sprite has collided
-        v[15] = 0u
+        v[15] = VF_CARRY_OFF
 
         for (sprite in memory.copyOfRange(this.I, this.I + n)) {
 
@@ -125,8 +138,8 @@ class Cpu() {
 
                 screen.setPixel(point.x, point.y, bit)
 
-                if (v[15].equals(0u)) {
-                    if (screen.getPixels(point.x, point.y) != oldBit) v[15] = 1u
+                if (v[15].equals(VF_CARRY_OFF)) {
+                    if (screen.getPixels(point.x, point.y) != oldBit) v[15] = VF_CARRY_ON
                 }
 
                 point.x++
@@ -181,7 +194,7 @@ class Cpu() {
     // And so forth
     private fun fetchCurrentCommand(): Array<Int> {
         val array = Array<Int>(4, { _ -> 0 })
-        array[0] = memory.get(pc).and(0xF0) /*.and(0xF0)*/ shr 4
+        array[0] = memory.get(pc).and(0xF0) shr 4
         array[1] = memory.get(pc).and(0x0F)
         array[2] = memory.get(pc + 1).and(0xF0) shr 4
         array[3] = memory.get(pc + 1).and(0x0F)
