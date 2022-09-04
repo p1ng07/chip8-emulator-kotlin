@@ -10,7 +10,7 @@ object DesktopLauncher {
         val config = Lwjgl3ApplicationConfiguration()
         config.setTitle("Chip 8 emulator")
         config.setResizable(false)
-        val yes = Chip8Emulator.screenData
+        val yes = Screen.data
         config.setForegroundFPS(yes.FPS)
 
         config.setWindowedMode(

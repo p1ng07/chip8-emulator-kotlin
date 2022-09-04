@@ -31,13 +31,11 @@ class Cpu() {
     private var screen = Screen()
 
     public fun tick() {
-        // for (i in 1..(CPU_FREQUENCY / Chip8Emulator.screenData.FPS)) {
-        Gdx.app.log("Start", "")
+        // for (i in 1..(CPU_FREQUENCY / Screen.data.FPS)) {
         Gdx.app.log(
                 "fetch",
-                "${fetchCurrentCommand()[0]}${fetchCurrentCommand()[1]}${fetchCurrentCommand()[2]}${fetchCurrentCommand()[3]}}"
+                "${fetchCurrentCommand()[0]} ${fetchCurrentCommand()[1]} ${fetchCurrentCommand()[2]} ${fetchCurrentCommand()[3]}}"
         )
-        Gdx.app.log("End", "")
 
         executeOpCode(fetchCurrentCommand())
         pc += 2
@@ -56,11 +54,11 @@ class Cpu() {
                 if (fourth == 0xE && third == 0xE) {
                     pc = stack.firstElement()
                     stack.remove(0)
-                } else screenPixels = Array(64) { BooleanArray(32, { _ -> false }) }
+                } else screen.resetPixels()
             }
             1 -> pc = nibblesToInt(array, 3).toInt()
             2 -> {
-                stack.add(pc)
+                stack.add(0, pc)
                 pc = nibblesToInt(array, 3).toInt()
             }
             3 -> if (v[second].equals(nibblesToInt(array, 2))) pc += 2
@@ -79,19 +77,19 @@ class Cpu() {
                             v[second] = v[second].plus(v[third]).toUByte()
                         }
                         5 -> {
-                            v[15] = if (v[second] > v[third]) 0xffu else 0u
+                            v[15] = if (v[second] > v[third]) 1u else 0u
                             v[second] = v[second].minus(v[third]).toUByte()
                         }
                         6 -> {
-                            v[15] = if (v[second].rem(2u).equals(1)) 0xffu else 0u
+                            v[15] = if (v[second].rem(2u).equals(1)) 1u else 0u
                             v[second] = v[second].div(2u).toUByte()
                         }
                         7 -> {
-                            v[15] = if (v[third] > v[second]) 0xffu else 0u
+                            v[15] = if (v[third] > v[second]) 1u else 0u
                             v[second] = v[third].minus(v[second]).toUByte()
                         }
                         0xe -> {
-                            v[15] = if (v[second] >= 128u) 0xffu else 0u
+                            v[15] = if (v[second] >= 128u) 1u else 0u
                             v[second] = v[second].times(2u).toUByte()
                         }
                     }
@@ -113,18 +111,42 @@ class Cpu() {
         // Represents the pixel to draw
         var point = Vector2Int(x, y)
 
-        // Iterate through every sprite
+        // VF (v[15]) is used if the any sprite has collided
+        v[15] = 0u
+
         for (sprite in sprites) {
+
             // Iterate through every bit of every sprite starting at the most significant bit
-            var xor = false
             for (i in 7 downTo 0) {
                 var bit = if ((sprite.toInt() shr i).and(1) == 1) true else false
-                if (!xor) if (screenPixels[point.x][point.y].and(bit)) xor = true
-                screenPixels[point.x][point.y] = screenPixels[point.x][point.y].xor(bit)
+
+                val oldBit = screen.getPixels(point.x, point.y)
+
+                screen.setPixel(point.x, point.y, bit)
+
+                if (v[15].equals(0u)) {
+                    if (screen.getPixels(point.x, point.y) != oldBit) v[15] = 1u
+                }
+
                 point.x++
+
+                // If the coordinate of the pixel to set is outside of display, it wraps around to
+                // the other side
+                if (point.x >= Screen.data.COLS) point.x = 0
             }
+            // Reset the x coord
+            point.x = x
             point.y++
+
+            // If the coordinate of the pixel to set is outside of display, it wraps around to the
+            // other side
+            if (point.y >= Screen.data.ROWS) point.y = 0
         }
+    }
+
+    // Independent function that draws the screen
+    public fun drawScreen() {
+        screen.draw()
     }
 
     public fun loadRomToMemory(romFileName: String) {
@@ -142,6 +164,7 @@ class Cpu() {
         for (i in startIndex downTo startIndex - n + 1) {
             res += array[i].toUInt() * 16f.pow(startIndex - i).toUInt()
         }
+        println(res)
         return res
     }
 

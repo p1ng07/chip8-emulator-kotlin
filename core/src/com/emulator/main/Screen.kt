@@ -1,22 +1,54 @@
 package com.emulator.main
 
-class Screen() :  {
-    
-    private val ROWS = 64
-    private val COLS = 32
-    private var pixels = Array(ROWS) { BooleanArray(COLS, { _ -> false }) }
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType
 
-    public fun resetPixels() { this.pixels = Array(ROWS){BooleanArray(COLS,{_ -> false})} }
+class Screen() {
 
-    // The origin of screen on original chip 8 implementations is on the Top left so magic
-    public fun setPixel(x: Int, y: Int, p: Boolean){
-        if(x >= COLS || x < 0 || y >= ROWS || y < 0) return
+    public object data {
+        const val FPS = 1
+        const val GAME_X_OFFSET = 150
+        const val SIZE_OF_SQUARE_IN_PIXELS = 15
+        const val ROWS = 64
+        const val COLS = 32
+    }
+    private var pixels = Array(data.ROWS) { BooleanArray(data.COLS, { _ -> false }) }
 
-        pixels[x][COLS-y-1] = p
+    public fun resetPixels() {
+        this.pixels = Array(data.ROWS) { BooleanArray(data.COLS, { _ -> false }) }
     }
 
-    // TODO
-    public fun getPixels() {
-        
+    // The origin of screen on original chip 8 implementations is on the Top left so magic
+    public fun setPixel(x: Int, y: Int, p: Boolean) {
+        if (x >= data.COLS || x < 0 || y >= data.ROWS || y < 0) return
+
+        pixels[x][data.COLS - y - 1] = p.xor(pixels[x][data.COLS - y - 1])
+    }
+
+    public fun getPixels(x: Int, y: Int): Boolean {
+        if (x >= data.COLS || x < 0 || y >= data.ROWS || y < 0) {
+            throw Exception("getPixels() in Screen.kt, overflow or underflow of parameters")
+        } else return pixels[x][data.COLS - y - 1]
+    }
+
+    public fun draw() {
+        val shapeRenderer = ShapeRenderer()
+        shapeRenderer.begin(ShapeType.Filled)
+        shapeRenderer.setColor(Color.BLACK)
+        for (col in pixels.indices) {
+            for (row in pixels[col].indices) {
+                if (pixels[col][row]) shapeRenderer.setColor(Color.CORAL)
+                else shapeRenderer.setColor(Color.BLACK)
+
+                shapeRenderer.rect(
+                        (data.GAME_X_OFFSET + data.SIZE_OF_SQUARE_IN_PIXELS * col).toFloat(),
+                        (data.SIZE_OF_SQUARE_IN_PIXELS * row).toFloat(),
+                        (data.SIZE_OF_SQUARE_IN_PIXELS).toFloat(),
+                        (data.SIZE_OF_SQUARE_IN_PIXELS).toFloat()
+                )
+            }
+        }
+        shapeRenderer.end()
     }
 }
