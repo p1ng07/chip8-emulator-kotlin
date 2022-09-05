@@ -101,7 +101,7 @@ class Cpu() {
             0xB -> pc = (nibblesToInt(array, 3) + v[0]).toInt()
             0xC -> v[second] = nibblesToInt(array, 2).and(Random.nextBits(8).toUInt()).toUByte()
             0xD -> drawSpriteAtXY(second, third, fourth)
-            0xE -> println("Key commands, TODO")
+            0xE -> println("TODO Key commands")
             // when(fourth){
             //     0x1
             //     0xE ->
@@ -110,7 +110,6 @@ class Cpu() {
                     when (fourth) {
                         7 -> v[second] = delay.toUByte()
                         0xA -> println("TODO Await for a key press")
-                        5 -> delay = v[second].toInt()
                         8 -> sound = v[second].toInt()
                         0xE -> I += v[second].toInt()
                         9 ->
@@ -123,12 +122,9 @@ class Cpu() {
                                 )
                         else -> {
                             when (third) {
-                                5 ->
-                                        for (i in v.copyOfRange(0, second).indices) memory[I + i] =
-                                                v[i].toInt()
-                                6 ->
-                                        for (i in v.copyOfRange(0, second).indices) v[i] =
-                                                memory[I + i].toUByte()
+                                1 -> delay = v[second].toInt()
+                                5 -> for (i in 0..second) memory[I + i] = v[i].toInt()
+                                6 -> for (i in 0..second) v[i] = memory[I + i].toUByte()
                             }
                         }
                     }
@@ -141,7 +137,6 @@ class Cpu() {
     }
 
     // Search for DXYN chip-8 instruction
-    // TODO
     private fun drawSpriteAtXY(x: Int, y: Int, n: Int) {
         // Represents the pixel to draw
         var point = Vector2Int(v[x].toInt().rem(63), v[y].toInt().rem(31))
