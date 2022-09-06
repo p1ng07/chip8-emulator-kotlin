@@ -12,10 +12,10 @@ data class Vector2Int(var x: Int, var y: Int)
 
 // Handles the opcode extraction and execution, as well as simulates one cpu tick
 @ExperimentalUnsignedTypes
-class Cpu() {
+class Cpu {
 
     // Number of opcodes to be executed per second (HZ)
-    val CPU_FREQUENCY = 500
+    val CPU_FREQUENCY = 1000
 
     private var oneSecondTimer = timerReset()
     private var delay = 60
@@ -25,8 +25,11 @@ class Cpu() {
     private var pc = PC_START
     private var stack = Vector<Int>()
     private var memory = IntArray(4096)
+    private var endOfProgram: Int = 0
     private var v = UByteArray(16)
     private var I = 0
+
+    private var shouldIncrement = true
 
     private var VF_CARRY_ON: UByte = 1u
     private var VF_CARRY_OFF: UByte = 0u
@@ -34,15 +37,19 @@ class Cpu() {
     private var screen = Screen()
 
     public fun tick() {
-        // for (i in 1..(CPU_FREQUENCY / Screen.data.FPS)) {
-        Gdx.app.log(
-                "fetch",
-                "${fetchCurrentCommand()[0].toString(16)}${fetchCurrentCommand()[1].toString(16)}${fetchCurrentCommand()[2].toString(16)}${fetchCurrentCommand()[3].toString(16)}}"
-        )
+        for (i in 1..(CPU_FREQUENCY / Screen.data.FPS)) {
+            Gdx.app.log(
+                    "fetch",
+                    "${fetchCurrentCommand()[0].toString(16)}${fetchCurrentCommand()[1].toString(16)}${fetchCurrentCommand()[2].toString(16)}${fetchCurrentCommand()[3].toString(16)}}"
+            )
 
-        executeOpCode(fetchCurrentCommand())
-        pc += 2
-        // }
+            executeOpCode(fetchCurrentCommand())
+
+            if (shouldIncrement) pc += 2 else shouldIncrement = true
+            if (pc >= 4096) {
+                pc -= 2
+            }
+        }
     }
 
     private fun executeOpCode(array: Array<Int>) {
@@ -54,19 +61,45 @@ class Cpu() {
 
         when (first) {
             0 -> {
-                if (fourth == 0xE && third == 0xE) {
-                    pc = stack.firstElement()
-                    stack.remove(0)
-                } else screen.resetPixels()
+                if (third == 0xE) {
+                    if (fourth == 0xE) {
+                        Gdx.app.log("pc was ", "$pc")
+
+                        pc = stack.removeAt(0)
+
+                        Gdx.app.log("pc removed from stack and set", "$pc")
+
+                        shouldIncrement = false
+                    } else {
+                        screen.resetPixels()
+                    }
+                }
             }
-            1 -> pc = nibblesToInt(array, 3).toInt()
-            2 -> {
-                stack.add(0, pc)
+            1 -> {
                 pc = nibblesToInt(array, 3).toInt()
+                shouldIncrement = false
             }
-            3 -> if (v[second] == nibblesToInt(array, 2).toUByte()) pc += 2
-            4 -> if (v[second].toUInt() != nibblesToInt(array, 2)) pc += 2
-            5 -> if (v[second] == v[third]) pc += 2
+            2 -> {
+                stack.add(0, pc + 2)
+                Gdx.app.log("Added to the stack", "$pc")
+
+                pc = nibblesToInt(array, 3).toInt()
+                Gdx.app.log("PC set ", "${nibblesToInt(array,3)}")
+
+                shouldIncrement = false
+            }
+            3 ->
+                    if (v[second] == nibblesToInt(array, 2).toUByte()) {
+                        pc += 2
+                    }
+            4 ->
+                    if (v[second].toUInt() != nibblesToInt(array, 2)) {
+                        pc += 2
+                    }
+            5 ->
+                    if (v[second] == v[third]) {
+                        pc += 2
+                    }
             6 -> v[second] = nibblesToInt(array, 2).toUByte()
             7 -> v[second] = (v[second] + nibblesToInt(array, 2)).toUByte()
             8 ->
@@ -77,11 +110,11 @@ class Cpu() {
                         3 -> v[second] = v[second].xor(v[third])
                         4 -> {
                             if (v[second] + v[third] > 255u) v[15] = VF_CARRY_ON
-                            v[second] = v[second].plus(v[third]).toUByte()
+                            v[second] = (v[second] + v[third]).toUByte()
                         }
                         5 -> {
                             v[15] = if (v[second] > v[third]) VF_CARRY_ON else VF_CARRY_OFF
-                            v[second] = v[second].minus(v[third]).toUByte()
+                            v[second] = (v[second] - v[third]).toUByte()
                         }
                         6 -> {
                             v[15] = if (v[second].rem(2u).equals(1)) VF_CARRY_ON else VF_CARRY_OFF
@@ -89,23 +122,33 @@ class Cpu() {
                         }
                         7 -> {
                             v[15] = if (v[third] > v[second]) VF_CARRY_ON else VF_CARRY_OFF
-                            v[second] = v[third].minus(v[second]).toUByte()
+                            v[second] = (v[third] - v[second]).toUByte()
                         }
                         0xe -> {
                             v[15] = if (v[second] >= 128u) VF_CARRY_ON else VF_CARRY_OFF
                             v[second] = v[second].times(2u).toUByte()
                         }
                     }
-            9 -> if (v[second].toInt() != v[third].toInt()) pc += 2
-            0xA -> this.I = nibblesToInt(array, 3).toInt()
-            0xB -> pc = (nibblesToInt(array, 3) + v[0]).toInt()
-            0xC -> v[second] = nibblesToInt(array, 2).and(Random.nextBits(8).toUInt()).toUByte()
+            9 ->
+                    if (v[second].toInt() != v[third].toInt()) {
+                        pc += 2
+                    }
+            0xA -> I = nibblesToInt(array, 3).toInt()
+            0xB -> {
+                pc = (nibblesToInt(array, 3) + v[0]).toInt()
+                shouldIncrement = false
+            }
+            0xC -> {
+                val random = Random.nextBits(8).toUInt()
+                v[second] = (nibblesToInt(array, 2).and(random)).toUByte()
+            }
             0xD -> drawSpriteAtXY(second, third, fourth)
-            0xE -> println("TODO Key commands")
-            // when(fourth){
-            //     0x1
-            //     0xE ->
-            // }
+            0xE -> {
+                when (fourth) {
+                    0xE -> if (Gdx.input.isKeyPressed(v[second].toInt())) pc += 2
+                    0x1 -> if (!Gdx.input.isKeyPressed(v[second].toInt())) pc += 2
+                }
+            }
             0xF ->
                     when (fourth) {
                         7 -> v[second] = delay.toUByte()
@@ -141,6 +184,7 @@ class Cpu() {
         // Represents the pixel to draw
         var point = Vector2Int(v[x].toInt().rem(63), v[y].toInt().rem(31))
 
+        Gdx.app.log("Print call!!!", "")
         // VF (v[15]) is used if the any sprite has collided
         v[15] = VF_CARRY_OFF
 
@@ -169,7 +213,7 @@ class Cpu() {
             point.y++
 
             // If the coordinate of the pixel to set is outside of display, it stops drawing
-            if (point.y >= Screen.data.ROWS) break
+            // if (point.y >= Screen.data.ROWS) break
         }
     }
 
@@ -182,6 +226,8 @@ class Cpu() {
         File(romFileName).readBytes().toUByteArray().forEachIndexed { index: Int, element: UByte ->
             memory[index + PC_START] = element.toInt()
         }
+        endOfProgram = File(romFileName).readBytes().size
+        Gdx.app.log("End of program", "$endOfProgram")
     }
 
     private fun nibblesToInt(array: Array<Int>, n: Int, startIndex: Int = 3): UInt {
@@ -193,7 +239,6 @@ class Cpu() {
         for (i in startIndex downTo startIndex - n + 1) {
             res += array[i].toUInt() * 16f.pow(startIndex - i).toUInt()
         }
-        println(res)
         return res
     }
 
@@ -202,11 +247,11 @@ class Cpu() {
     // A nibble is an integer that represents a 4 bit number
     // Example:
     // If a byte is 0001 1111
-    // Then this Byte has two nibble: 1 and 15
+    // Then this Byte has two nibbles: 1 and 15
     // ----
     // This nibbles are stored Big-Endian
-    // The first nibble of the first Byte is array[0]
-    // The second nibble of the first Byte is array[1]
+    // The first nibble (most significant) of the first Byte is array[0]
+    // The second nibble (least significant) of the first Byte is array[1]
     // And so forth
     private fun fetchCurrentCommand(): Array<Int> {
         val array = Array<Int>(4, { _ -> 0 })
