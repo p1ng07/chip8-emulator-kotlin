@@ -1,9 +1,11 @@
 package com.emulator.main
 
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.Input.Keys
 import java.io.File
 import java.util.Timer
 import java.util.Vector
+import kotlin.collections.HashMap
 import kotlin.concurrent.timer
 import kotlin.math.*
 import kotlin.random.Random
@@ -15,7 +17,7 @@ data class Vector2Int(var x: Int, var y: Int)
 class Cpu {
 
     // Number of opcodes to be executed per second (HZ)
-    val CPU_FREQUENCY = 1000
+    val CPU_FREQUENCY = 600
 
     private var oneSecondTimer = timerReset()
     private var delay = 60
@@ -190,14 +192,39 @@ class Cpu {
             0xD -> drawSpriteAtXY(second, third, fourth)
             0xE -> {
                 when (fourth) {
-                    0xE -> if (Gdx.input.isKeyPressed(v[second].toInt())) pc += 2
-                    0x1 -> if (!Gdx.input.isKeyPressed(v[second].toInt())) pc += 2
+                    0x1 -> {
+                        // TODO: Verify if v[second] key is being pressed
+                        // TODO: Redo all of the key logic
+                        // TODO: There is something wrong with the letters in the space invaders
+                        // demo, figure it out
+                        val key = keyMap[v[second].toInt()]
+                        if (key != null) {
+                            if (!Gdx.input.isKeyPressed(key)) pc += 2
+                        }
+                    }
+                    0xE -> {
+                        // TODO: Verify if v[second] key is being pressed
+                        val key = keyMap[v[second].toInt()]
+                        if (key != null) {
+                            if (Gdx.input.isKeyPressed(key)) pc += 2
+                        }
+                    }
                 }
             }
             0xF ->
                     when (fourth) {
                         7 -> v[second] = delay.toUByte()
-                        0xA -> println("TODO Await for a key press")
+                        0xA -> {
+                            // TODO Await for a key press and store it in v[second]
+                            /*While no known key is pressed, prevent program from going advancing*/
+                            val key = isAnyValidKeyPressed()
+
+                            if (key != null) {
+                                for (i in keyMap.keys) if (keyMap[i] == key) v[second] = i.toUByte()
+                            } else {
+                                shouldIncrement = false
+                            }
+                        }
                         8 -> sound = v[second].toInt()
                         0xE -> I += v[second].toInt()
                         9 ->
@@ -339,6 +366,7 @@ class Cpu {
                 {
                     delay--
                     sound--
+                    if(sound != 0) beepSound.play()
                     if (delay == -1) delay = 60
                     if (sound == -1) sound = 60
                 }

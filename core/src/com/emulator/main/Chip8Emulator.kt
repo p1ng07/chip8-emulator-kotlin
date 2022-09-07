@@ -9,15 +9,13 @@ import com.badlogic.gdx.utils.ScreenUtils
 @ExperimentalUnsignedTypes
 class Chip8Emulator : ApplicationAdapter() {
 
-    private var romFileName = "roms/test.ch8"
+    private var romFileName = "roms/space_invaders.ch8"
 
     private var cpu = Cpu()
 
     override public fun create() {
-        // Implement a full machine restart for dynamic rom selection
-        // restartEmulator()
         cpu.loadRomToMemory(romFileName)
-        Gdx.app.setLogLevel(Logger.INFO)
+        Gdx.app.setLogLevel(Logger.NONE)
     }
 
     override public fun render() {
@@ -26,11 +24,7 @@ class Chip8Emulator : ApplicationAdapter() {
         cpu.drawScreen()
     }
 
-    // Read data from rom to memory, adress 0x0000 to 0x0200 is reserved
-
-    // Converts n nibbles to Int
-    // start: index of least significance bit where the conversion will start
-    // n: Number of bits to convert from the start
-
-    override public fun dispose() {}
+    override public fun dispose() {
+        System.exit(0)
+    }
 }

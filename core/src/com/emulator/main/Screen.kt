@@ -7,7 +7,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType
 class Screen() {
 
     public object data {
-        const val FPS = 15
+        const val FPS = 60
         const val GAME_X_OFFSET = 150
         const val SIZE_OF_SQUARE_IN_PIXELS = 15
         const val ROWS = 32
@@ -26,7 +26,6 @@ class Screen() {
 
     // The origin of screen on original chip 8 implementations is on the Top left so magic
     public fun setPixel(x: Int, y: Int, p: Boolean) {
-        if (x >= data.COLS || x < 0 || y >= data.ROWS || y < 0) return
 
         pixels[data.ROWS - y - 1][x] = p.xor(pixels[data.ROWS - y - 1][x])
     }
