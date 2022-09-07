@@ -154,23 +154,23 @@ class Cpu {
                         2 -> v[second] = v[second].and(v[third])
                         3 -> v[second] = v[second].xor(v[third])
                         4 -> {
-                            if (v[second] + v[third] > 255u) v[15] = VF_CARRY_ON
+                            if (v[second] + v[third] > 255u) v[15] = VF_FLAG_ON
                             v[second] = (v[second] + v[third]).toUByte()
                         }
                         5 -> {
-                            v[15] = if (v[second] > v[third]) VF_CARRY_ON else VF_CARRY_OFF
+                            v[15] = if (v[second] > v[third]) VF_FLAG_ON else VF_CARRY_OFF
                             v[second] = (v[second] - v[third]).toUByte()
                         }
                         6 -> {
-                            v[15] = if (v[second].rem(2u).equals(1)) VF_CARRY_ON else VF_CARRY_OFF
+                            v[15] = if (v[second].rem(2u).equals(1)) VF_FLAG_ON else VF_CARRY_OFF
                             v[second] = v[second].div(2u).toUByte()
                         }
                         7 -> {
-                            v[15] = if (v[third] > v[second]) VF_CARRY_ON else VF_CARRY_OFF
+                            v[15] = if (v[third] > v[second]) VF_FLAG_ON else VF_CARRY_OFF
                             v[second] = (v[third] - v[second]).toUByte()
                         }
                         0xe -> {
-                            v[15] = if (v[second] >= 128u) VF_CARRY_ON else VF_CARRY_OFF
+                            v[15] = if (v[second] >= 128u) VF_FLAG_ON else VF_CARRY_OFF
                             v[second] = v[second].times(2u).toUByte()
                         }
                     }
@@ -267,7 +267,7 @@ class Cpu {
                 screen.setPixel(point.x, point.y, bit)
 
                 if (v[15] == VF_CARRY_OFF) {
-                    if (screen.getPixels(point.x, point.y) != oldBit) v[15] = VF_CARRY_ON
+                    if (screen.getPixels(point.x, point.y) != oldBit) v[15] = VF_FLAG_ON
                 }
 
                 point.x++
@@ -281,7 +281,7 @@ class Cpu {
             point.y++
 
             // If the coordinate of the pixel to set is outside of display, it stops drawing
-            // if (point.y >= Screen.data.ROWS) break
+            if (point.y >= Screen.data.ROWS) break
         }
     }
 
