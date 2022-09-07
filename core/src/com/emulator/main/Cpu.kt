@@ -31,14 +31,51 @@ class Cpu {
 
     private var shouldIncrement = true
 
-    private var VF_CARRY_ON: UByte = 1u
+    private var VF_FLAG_ON: UByte = 0x01u
     private var VF_CARRY_OFF: UByte = 0u
 
     private var screen = Screen()
+    private var beepSound = Gdx.audio.newSound(Gdx.files.internal("beep.mp3"))
+
+    // Maps<Original Key, Mapped key> the chip 8 keys to actual keyboard Keys
+    // Original keys:
+    // 1 2 3 C
+    // 4 5 6 D
+    // 7 8 9 E
+    // A 0 B F
+    // Mapped Keys:
+    // 1 2 3 4
+    // Q W E R
+    // A S D F
+    // Z X C V
+    private var keyMap = HashMap<Int, Int>()
+
+    init {
+        keyMap[1] = Keys.NUM_1
+        keyMap[2] = Keys.NUM_2
+        keyMap[3] = Keys.NUM_3
+        keyMap[0xC] = Keys.C
+
+        keyMap[0x4] = Keys.NUM_4
+        keyMap[0x5] = Keys.NUM_5
+        keyMap[0x6] = Keys.NUM_6
+        keyMap[0xD] = Keys.D
+
+        keyMap[7] = Keys.A
+        keyMap[8] = Keys.S
+        keyMap[9] = Keys.D
+        keyMap[0xE] = Keys.F
+
+        keyMap[0xA] = Keys.Z
+        keyMap[0] = Keys.X
+        keyMap[0xB] = Keys.C
+        keyMap[0xF] = Keys.V
+    }
 
     public fun tick() {
         for (i in 1..(CPU_FREQUENCY / Screen.data.FPS)) {
-            Gdx.app.log(
+        // for (i in 1..100) {
+            Gdx.app.debug(
                     "fetch",
                     "${fetchCurrentCommand()[0].toString(16)}${fetchCurrentCommand()[1].toString(16)}${fetchCurrentCommand()[2].toString(16)}${fetchCurrentCommand()[3].toString(16)}}"
             )
@@ -46,28 +83,36 @@ class Cpu {
             executeOpCode(fetchCurrentCommand())
 
             if (shouldIncrement) pc += 2 else shouldIncrement = true
-            if (pc >= 4096) {
-                pc -= 2
-            }
+
+            // if (memory[pc] == 0x0000) {
+            //     Gdx.app.debug("End", "Reached end of program")
+            //     pc -= 2
+            // }
         }
     }
 
     private fun executeOpCode(array: Array<Int>) {
-
         val first = array[0]
         val second = array[1]
         val third = array[2]
         val fourth = array[3]
-
         when (first) {
             0 -> {
+                // This is not an opcode, it serves as a stopper when the program reaches invalid
+                // code
+                if (third == 0x0) {
+                    shouldIncrement = false
+
+                    return
+                }
+
                 if (third == 0xE) {
                     if (fourth == 0xE) {
-                        Gdx.app.log("pc was ", "$pc")
+                        Gdx.app.debug("pc was ", "$pc")
 
                         pc = stack.removeAt(0)
 
-                        Gdx.app.log("pc removed from stack and set", "$pc")
+                        Gdx.app.debug("pc removed from stack and set", "$pc")
 
                         shouldIncrement = false
                     } else {
@@ -81,10 +126,10 @@ class Cpu {
             }
             2 -> {
                 stack.add(0, pc + 2)
-                Gdx.app.log("Added to the stack", "$pc")
+                Gdx.app.debug("Added to the stack", "$pc")
 
                 pc = nibblesToInt(array, 3).toInt()
-                Gdx.app.log("PC set ", "${nibblesToInt(array,3)}")
+                Gdx.app.debug("PC set ", "${nibblesToInt(array,3)}")
 
                 shouldIncrement = false
             }
@@ -172,19 +217,42 @@ class Cpu {
                         }
                     }
             else ->
-                    Gdx.app.error(
+                    Gdx.app.log(
                             "ERROR",
                             "Unknown instruction: ${first.toString(16)}${second.toString(16)}${third.toString(16)}${fourth.toString(16)}}"
                     )
         }
     }
 
+    // Returns which valid key is pressed, if none are pressed then returns null
+    private fun isAnyValidKeyPressed(): Int? {
+        if (Gdx.input.isKeyPressed(Keys.NUM_1)) return Keys.NUM_1
+        else if (Gdx.input.isKeyPressed(Keys.NUM_2)) return Keys.NUM_2
+        else if (Gdx.input.isKeyPressed(Keys.NUM_3)) return Keys.NUM_3
+        else if (Gdx.input.isKeyPressed(Keys.NUM_4)) return Keys.NUM_4
+        else if (Gdx.input.isKeyPressed(Keys.Q)) return Keys.Q
+        else if (Gdx.input.isKeyPressed(Keys.W)) return Keys.W
+        else if (Gdx.input.isKeyPressed(Keys.E)) return Keys.E
+        else if (Gdx.input.isKeyPressed(Keys.R)) return Keys.R
+        else if (Gdx.input.isKeyPressed(Keys.A)) return Keys.A
+        else if (Gdx.input.isKeyPressed(Keys.S)) return Keys.S
+        else if (Gdx.input.isKeyPressed(Keys.D)) return Keys.D
+        else if (Gdx.input.isKeyPressed(Keys.F)) return Keys.F
+        else if (Gdx.input.isKeyPressed(Keys.Z)) return Keys.Z
+        else if (Gdx.input.isKeyPressed(Keys.X)) return Keys.X
+        else if (Gdx.input.isKeyPressed(Keys.C)) return Keys.C
+        else if (Gdx.input.isKeyPressed(Keys.V)) return Keys.V
+        return null
+    }
+
     // Search for DXYN chip-8 instruction
     private fun drawSpriteAtXY(x: Int, y: Int, n: Int) {
         // Represents the pixel to draw
-        var point = Vector2Int(v[x].toInt().rem(63), v[y].toInt().rem(31))
+        var point =
+                Vector2Int(v[x].toInt().rem(Screen.data.COLS), v[y].toInt().rem(Screen.data.ROWS))
 
-        Gdx.app.log("Print call!!!", "")
+        Gdx.app.debug("Print call", "x:${point.x} y:${point.y} n:$n")
+
         // VF (v[15]) is used if the any sprite has collided
         v[15] = VF_CARRY_OFF
 
@@ -227,7 +295,7 @@ class Cpu {
             memory[index + PC_START] = element.toInt()
         }
         endOfProgram = File(romFileName).readBytes().size
-        Gdx.app.log("End of program", "$endOfProgram")
+        Gdx.app.debug("End of program", "$endOfProgram")
     }
 
     private fun nibblesToInt(array: Array<Int>, n: Int, startIndex: Int = 3): UInt {
