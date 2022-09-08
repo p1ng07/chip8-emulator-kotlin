@@ -103,31 +103,19 @@ class Cpu constructor(val traceMode: Boolean) {
 
                 traceStepCounter++
 
-
                 if (traceStepCounter > 9) {
-                delay--
-                sound--
-                if (delay < 1) delay = 60
-                if (sound < 1) sound = 60
+                    delay--
+                    sound--
+                    if (delay < 1) delay = 60
+                    if (sound < 1) sound = 60
                     traceStepCounter = 0
                 }
-
             }
         } else {
 
             // for (i in 1..(CPU_FREQUENCY / Screen.data.FPS)) {
-            for (i in 1..10) {
-                Gdx.app.debug(
-                        "fetch",
-                        "${fetchCurrentCommand()[0].toString(16)}${fetchCurrentCommand()[1].toString(16)}${fetchCurrentCommand()[2].toString(16)}${fetchCurrentCommand()[3].toString(16)}}"
-                )
-
+            for (i in 1..5) {
                 step()
-
-                // if (memory[pc] == 0x0000) {
-                //     Gdx.app.debug("End", "Reached end of program")
-                //     pc -= 2
-                // }
             }
         }
     }
@@ -236,19 +224,8 @@ class Cpu constructor(val traceMode: Boolean) {
             0xD -> drawSpriteAtXY(second, third, fourth)
             0xE -> {
                 when (fourth) {
-                    0x1 -> {
-                        // TODO: Verify if v[second] key is being pressed
-                        // TODO: Redo all of the key logic
-                        // TODO: There is something wrong with the letters in the space invaders
-                        // demo, figure it out
-                        val key = keyMap[v[second].toInt()]
-                        if (!Gdx.input.isKeyPressed(key)) pc += 2
-                    }
-                    0xE -> {
-                        // TODO: Verify if v[second] key is being pressed
-                        val key = keyMap[v[second].toInt()]
-                        if (Gdx.input.isKeyPressed(key)) pc += 2
-                    }
+                    0x1 -> if (!Gdx.input.isKeyPressed(keyMap[v[second].toInt()])) pc += 2
+                    0xE -> if (Gdx.input.isKeyPressed(keyMap[v[second].toInt()])) pc += 2
                 }
             }
             0xF ->
@@ -260,7 +237,8 @@ class Cpu constructor(val traceMode: Boolean) {
                             val key = isAnyValidKeyPressed()
 
                             if (key != null) {
-                                for (i in keyMap.indices) if (keyMap[i] == key) v[second] = i.toUByte()
+                                for (i in keyMap.indices) if (keyMap[i] == key)
+                                        v[second] = i.toUByte()
                             } else {
                                 shouldIncrement = false
                             }
@@ -271,10 +249,11 @@ class Cpu constructor(val traceMode: Boolean) {
                                 println(
                                         "TODO set I to the location in memory of sprite data for digit v[second]"
                                 )
-                        3 ->
-                                println(
-                                        "TODO store the BCD representation of v[second] in I, I+1 and I+2"
-                                )
+                        3 ->{
+                            memory[I] = v[second].div(100u).toInt()
+                            memory[I+1] = v[second].rem(100u).div(10u).toInt()
+                            memory[I+2] = v[second].rem(10u).toInt()
+                        }
                         else -> {
                             when (third) {
                                 1 -> delay = v[second].toInt()
@@ -321,8 +300,11 @@ class Cpu constructor(val traceMode: Boolean) {
                         v[y].toInt().rem(Screen.data.ROWS - 1)
                 )
 
-        if(traceMode){
-            for(i in memory.copyOfRange(this.I, this.I + n)) Gdx.app.debug("sprite","${i.toString(2)}")
+        if (traceMode) {
+            for (i in memory.copyOfRange(this.I, this.I + n)) Gdx.app.debug(
+                    "sprite",
+                    "${i.toString(2)}"
+            )
         }
 
         // VF (v[15]) is used if the any sprite has collided
