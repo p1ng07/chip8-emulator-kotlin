@@ -9,13 +9,13 @@ import com.badlogic.gdx.utils.ScreenUtils
 @ExperimentalUnsignedTypes
 class Chip8Emulator : ApplicationAdapter() {
 
-    private var romFileName = "roms/space_invaders.ch8"
+    private var romFileName = "roms/breakout.ch8"
 
-    private var cpu = Cpu()
+    private var cpu = Cpu(traceMode= false)
 
     override public fun create() {
         cpu.loadRomToMemory(romFileName)
-        Gdx.app.setLogLevel(Logger.NONE)
+        Gdx.app.setLogLevel(Logger.DEBUG)
     }
 
     override public fun render() {

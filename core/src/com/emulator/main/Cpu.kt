@@ -5,7 +5,6 @@ import com.badlogic.gdx.Input.Keys
 import java.io.File
 import java.util.Timer
 import java.util.Vector
-import kotlin.collections.HashMap
 import kotlin.concurrent.timer
 import kotlin.math.*
 import kotlin.random.Random
@@ -14,12 +13,12 @@ data class Vector2Int(var x: Int, var y: Int)
 
 // Handles the opcode extraction and execution, as well as simulates one cpu tick
 @ExperimentalUnsignedTypes
-class Cpu {
+class Cpu constructor(val traceMode: Boolean) {
 
     // Number of opcodes to be executed per second (HZ)
     val CPU_FREQUENCY = 600
 
-    private var oneSecondTimer = timerReset()
+    private var oneSecondTimer = Timer()
     private var delay = 60
     private var sound = 60
 
@@ -37,7 +36,10 @@ class Cpu {
     private var VF_CARRY_OFF: UByte = 0u
 
     private var screen = Screen()
-    private var beepSound = Gdx.audio.newSound(Gdx.files.internal("beep.mp3"))
+
+    // Tracing variables
+    private var traceStepCounter = 0
+    private var isSteppingKeyPressed = false
 
     // Maps<Original Key, Mapped key> the chip 8 keys to actual keyboard Keys
     // Original keys:
@@ -46,13 +48,17 @@ class Cpu {
     // 7 8 9 E
     // A 0 B F
     // Mapped Keys:
-    // 1 2 3 4
-    // Q W E R
-    // A S D F
+    // 1 2 3 4 Q W E R A S D F
     // Z X C V
-    private var keyMap = HashMap<Int, Int>()
+    private var keyMap = IntArray(16, { _ -> 0 })
 
     init {
+        // If traceMode is not set, then we want the timers to behave normally and decrement at a
+        // frequency of 60 HZ
+        if (!traceMode) {
+            oneSecondTimer = timerReset()
+        }
+
         keyMap[1] = Keys.NUM_1
         keyMap[2] = Keys.NUM_2
         keyMap[3] = Keys.NUM_3
@@ -74,23 +80,61 @@ class Cpu {
         keyMap[0xF] = Keys.V
     }
 
+    // TODO Correctly manage cycles per second, FPS will be locked to 60 FPS
     public fun tick() {
-        for (i in 1..(CPU_FREQUENCY / Screen.data.FPS)) {
-        // for (i in 1..100) {
-            Gdx.app.debug(
-                    "fetch",
-                    "${fetchCurrentCommand()[0].toString(16)}${fetchCurrentCommand()[1].toString(16)}${fetchCurrentCommand()[2].toString(16)}${fetchCurrentCommand()[3].toString(16)}}"
-            )
+        // This is the debug mode, when in debug mode the program only advances with manual stepping
+        // And every 10 steps the timers are decremented
+        // Trace mode assumes that the frequency of the machine is 600 HZ
+        // So every 10 Cycles the timers are decremented
+        if (this.traceMode) {
+            if (Gdx.app.input.isKeyJustPressed(Keys.P)) {
 
-            executeOpCode(fetchCurrentCommand())
+                Gdx.app.debug(
+                        "fetch",
+                        "${fetchCurrentCommand()[0].toString(16)}${fetchCurrentCommand()[1].toString(16)}${fetchCurrentCommand()[2].toString(16)}${fetchCurrentCommand()[3].toString(16)}}"
+                )
 
-            if (shouldIncrement) pc += 2 else shouldIncrement = true
+                step()
 
-            // if (memory[pc] == 0x0000) {
-            //     Gdx.app.debug("End", "Reached end of program")
-            //     pc -= 2
-            // }
+                // In trace mode we want to print every single information after every single step
+                Gdx.app.debug("Registers", "")
+                for (i in v.indices) Gdx.app.debug("v${i.toString(16)}", "${v[i]}")
+                Gdx.app.debug("I register", "$I")
+
+                traceStepCounter++
+
+
+                if (traceStepCounter > 9) {
+                delay--
+                sound--
+                if (delay < 1) delay = 60
+                if (sound < 1) sound = 60
+                    traceStepCounter = 0
+                }
+
+            }
+        } else {
+
+            // for (i in 1..(CPU_FREQUENCY / Screen.data.FPS)) {
+            for (i in 1..10) {
+                Gdx.app.debug(
+                        "fetch",
+                        "${fetchCurrentCommand()[0].toString(16)}${fetchCurrentCommand()[1].toString(16)}${fetchCurrentCommand()[2].toString(16)}${fetchCurrentCommand()[3].toString(16)}}"
+                )
+
+                step()
+
+                // if (memory[pc] == 0x0000) {
+                //     Gdx.app.debug("End", "Reached end of program")
+                //     pc -= 2
+                // }
+            }
         }
+    }
+
+    private fun step() {
+        executeOpCode(fetchCurrentCommand())
+        if (shouldIncrement) pc += 2 else shouldIncrement = true
     }
 
     private fun executeOpCode(array: Array<Int>) {
@@ -198,16 +242,12 @@ class Cpu {
                         // TODO: There is something wrong with the letters in the space invaders
                         // demo, figure it out
                         val key = keyMap[v[second].toInt()]
-                        if (key != null) {
-                            if (!Gdx.input.isKeyPressed(key)) pc += 2
-                        }
+                        if (!Gdx.input.isKeyPressed(key)) pc += 2
                     }
                     0xE -> {
                         // TODO: Verify if v[second] key is being pressed
                         val key = keyMap[v[second].toInt()]
-                        if (key != null) {
-                            if (Gdx.input.isKeyPressed(key)) pc += 2
-                        }
+                        if (Gdx.input.isKeyPressed(key)) pc += 2
                     }
                 }
             }
@@ -220,7 +260,7 @@ class Cpu {
                             val key = isAnyValidKeyPressed()
 
                             if (key != null) {
-                                for (i in keyMap.keys) if (keyMap[i] == key) v[second] = i.toUByte()
+                                for (i in keyMap.indices) if (keyMap[i] == key) v[second] = i.toUByte()
                             } else {
                                 shouldIncrement = false
                             }
@@ -276,9 +316,14 @@ class Cpu {
     private fun drawSpriteAtXY(x: Int, y: Int, n: Int) {
         // Represents the pixel to draw
         var point =
-                Vector2Int(v[x].toInt().rem(Screen.data.COLS), v[y].toInt().rem(Screen.data.ROWS))
+                Vector2Int(
+                        v[x].toInt().rem(Screen.data.COLS - 1),
+                        v[y].toInt().rem(Screen.data.ROWS - 1)
+                )
 
-        Gdx.app.debug("Print call", "x:${point.x} y:${point.y} n:$n")
+        if(traceMode){
+            for(i in memory.copyOfRange(this.I, this.I + n)) Gdx.app.debug("sprite","${i.toString(2)}")
+        }
 
         // VF (v[15]) is used if the any sprite has collided
         v[15] = VF_CARRY_OFF
@@ -366,7 +411,7 @@ class Cpu {
                 {
                     delay--
                     sound--
-                    if(sound != 0) beepSound.play()
+                    // if(sound != 0) beepSound.play()
                     if (delay == -1) delay = 60
                     if (sound == -1) sound = 60
                 }
