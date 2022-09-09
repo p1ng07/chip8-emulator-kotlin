@@ -16,14 +16,12 @@ class Cpu(val traceMode: Boolean) {
     // Number of opcodes to be executed per second (HZ)
     val CPU_FREQUENCY = 600
 
-    private var delay = 60
-    private var sound = 60
+    private var delay = 59
+    private var sound = 59
 
-    private val PC_START = 0x200
-    private var pc = PC_START
+    private var pc = 0x200
     private var stack = Vector<Int>()
     private var memory = IntArray(4096)
-    private var endOfProgram: Int = 0
     private var v = UByteArray(16)
     private var I = 0
 
@@ -34,7 +32,6 @@ class Cpu(val traceMode: Boolean) {
 
     // Tracing variables
     private var stepCounter = 0
-    private var isSteppingKeyPressed = false
 
     // Maps<Original Key, Mapped key> the chip 8 keys to actual keyboard Keys
     // Original keys:
@@ -43,7 +40,9 @@ class Cpu(val traceMode: Boolean) {
     // 7 8 9 E
     // A 0 B F
     // Mapped Keys:
-    // 1 2 3 4 Q W E R A S D F
+    // 1 2 3 4
+    // Q W E R
+    // A S D F
     // Z X C V
     private var keyMap = IntArray(16, { _ -> 0 })
 
@@ -110,10 +109,8 @@ class Cpu(val traceMode: Boolean) {
                 stepCounter++
 
                 if (stepCounter > CPU_FREQUENCY / Screen.data.FPS - 1) {
-                    delay--
-                    sound--
-                    if (delay <= -1) delay = 60
-                    if (sound <= -1) sound = 60
+                    if (delay != 0) delay--
+                    if (sound != 0) sound--
                     stepCounter = 0
                 }
             }
@@ -123,10 +120,8 @@ class Cpu(val traceMode: Boolean) {
             for (i in 1..10) {
                 step()
             }
-            delay--
-            sound--
-            if (delay <= -1) delay = 60
-            if (sound <= -1) sound = 60
+            if (delay != 0) delay--
+            if (sound != 0) sound--
             stepCounter = 0
         }
     }
@@ -314,7 +309,7 @@ class Cpu(val traceMode: Boolean) {
                 screen.setPixel(point.x, point.y, bit)
 
                 if (v[15] == VF_CARRY_OFF) {
-                    if (screen.getPixels(point.x, point.y) != oldBit) v[15] = VF_FLAG_ON
+                    if (screen.getPixels(point.x, point.y) == false  &&  oldBit == true) v[15] = VF_FLAG_ON
                 }
 
                 point.x++
@@ -339,10 +334,8 @@ class Cpu(val traceMode: Boolean) {
 
     public fun loadRomToMemory(romFileName: String) {
         File(romFileName).readBytes().toUByteArray().forEachIndexed { index: Int, element: UByte ->
-            memory[index + PC_START] = element.toInt()
+            memory[index + 0x200] = element.toInt()
         }
-        endOfProgram = File(romFileName).readBytes().size
-        Gdx.app.debug("End of program", "$endOfProgram")
     }
 
     private fun nibblesToInt(array: Array<Int>, n: Int, startIndex: Int = 3): UInt {
