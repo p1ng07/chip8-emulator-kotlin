@@ -78,6 +78,25 @@ class Cpu constructor(val traceMode: Boolean) {
         keyMap[0] = Keys.X
         keyMap[0xB] = Keys.C
         keyMap[0xF] = Keys.V
+
+        val spriteData = intArrayOf(
+            0xF0, 0x90, 0x90, 0x90, 0xF0,
+            0x20, 0x60, 0x20, 0x20, 0x70,
+            0xF0, 0x10, 0xF0, 0x80, 0xF0,
+            0xF0, 0x10, 0xF0, 0x10, 0xF0,
+            0x90, 0x90, 0xF0, 0x10, 0x10,
+            0xF0, 0x80, 0xF0, 0x10, 0xF0,
+            0xF0, 0x80, 0xF0, 0x90, 0xF0,
+            0xF0, 0x10, 0x20, 0x40, 0x40,
+            0xF0, 0x90, 0xF0, 0x90, 0xF0,
+            0xF0, 0x90, 0xF0, 0x10, 0xF0,
+            0xF0, 0x90, 0xF0, 0x90, 0x90,
+            0xE0, 0x90, 0xE0, 0x90, 0xE0,
+            0xF0, 0x80, 0x80, 0x80, 0xF0,
+            0xF0, 0x80, 0xF0, 0x80, 0xF0,
+            0xF0, 0x80, 0xF0, 0x80, 0x90
+        )
+        for(i in spriteData.indices)memory[i] = spriteData[i]
     }
 
     // TODO Correctly manage cycles per second, FPS will be locked to 60 FPS
@@ -245,10 +264,7 @@ class Cpu constructor(val traceMode: Boolean) {
                         }
                         8 -> sound = v[second].toInt()
                         0xE -> I += v[second].toInt()
-                        9 ->
-                                println(
-                                        "TODO set I to the location in memory of sprite data for digit v[second]"
-                                )
+                        9 ->I = (v[second] * 5u).toInt()
                         3 ->{
                             memory[I] = v[second].div(100u).toInt()
                             memory[I+1] = v[second].rem(100u).div(10u).toInt()
