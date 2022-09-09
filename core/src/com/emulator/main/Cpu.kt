@@ -3,9 +3,7 @@ package com.emulator.main
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input.Keys
 import java.io.File
-import java.util.Timer
 import java.util.Vector
-import kotlin.concurrent.timer
 import kotlin.math.*
 import kotlin.random.Random
 
@@ -13,12 +11,11 @@ data class Vector2Int(var x: Int, var y: Int)
 
 // Handles the opcode extraction and execution, as well as simulates one cpu tick
 @ExperimentalUnsignedTypes
-class Cpu constructor(val traceMode: Boolean) {
+class Cpu(val traceMode: Boolean) {
 
     // Number of opcodes to be executed per second (HZ)
     val CPU_FREQUENCY = 600
 
-    private var oneSecondTimer = Timer()
     private var delay = 60
     private var sound = 60
 
@@ -38,7 +35,7 @@ class Cpu constructor(val traceMode: Boolean) {
     private var screen = Screen()
 
     // Tracing variables
-    private var traceStepCounter = 0
+    private var stepCounter = 0
     private var isSteppingKeyPressed = false
 
     // Maps<Original Key, Mapped key> the chip 8 keys to actual keyboard Keys
@@ -53,20 +50,14 @@ class Cpu constructor(val traceMode: Boolean) {
     private var keyMap = IntArray(16, { _ -> 0 })
 
     init {
-        // If traceMode is not set, then we want the timers to behave normally and decrement at a
-        // frequency of 60 HZ
-        if (!traceMode) {
-            oneSecondTimer = timerReset()
-        }
-
         keyMap[1] = Keys.NUM_1
         keyMap[2] = Keys.NUM_2
         keyMap[3] = Keys.NUM_3
         keyMap[0xC] = Keys.C
 
-        keyMap[0x4] = Keys.NUM_4
-        keyMap[0x5] = Keys.NUM_5
-        keyMap[0x6] = Keys.NUM_6
+        keyMap[4] = Keys.NUM_4
+        keyMap[5] = Keys.NUM_5
+        keyMap[6] = Keys.NUM_6
         keyMap[0xD] = Keys.D
 
         keyMap[7] = Keys.A
@@ -79,39 +70,39 @@ class Cpu constructor(val traceMode: Boolean) {
         keyMap[0xB] = Keys.C
         keyMap[0xF] = Keys.V
 
-        val spriteData = intArrayOf(
-            0xF0, 0x90, 0x90, 0x90, 0xF0,
-            0x20, 0x60, 0x20, 0x20, 0x70,
-            0xF0, 0x10, 0xF0, 0x80, 0xF0,
-            0xF0, 0x10, 0xF0, 0x10, 0xF0,
-            0x90, 0x90, 0xF0, 0x10, 0x10,
-            0xF0, 0x80, 0xF0, 0x10, 0xF0,
-            0xF0, 0x80, 0xF0, 0x90, 0xF0,
-            0xF0, 0x10, 0x20, 0x40, 0x40,
-            0xF0, 0x90, 0xF0, 0x90, 0xF0,
-            0xF0, 0x90, 0xF0, 0x10, 0xF0,
-            0xF0, 0x90, 0xF0, 0x90, 0x90,
-            0xE0, 0x90, 0xE0, 0x90, 0xE0,
-            0xF0, 0x80, 0x80, 0x80, 0xF0,
-            0xF0, 0x80, 0xF0, 0x80, 0xF0,
-            0xF0, 0x80, 0xF0, 0x80, 0x90
-        )
-        for(i in spriteData.indices)memory[i] = spriteData[i]
+        val spriteData =
+                intArrayOf(
+                        0xF0, 0x90, 0x90, 0x90, 0xF0,
+                        0x20, 0x60, 0x20, 0x20, 0x70,
+                        0xF0, 0x10, 0xF0, 0x80, 0xF0,
+                        0xF0, 0x10, 0xF0, 0x10, 0xF0,
+                        0x90, 0x90, 0xF0, 0x10, 0x10,
+                        0xF0, 0x80, 0xF0, 0x10, 0xF0,
+                        0xF0, 0x80, 0xF0, 0x90, 0xF0,
+                        0xF0, 0x10, 0x20, 0x40, 0x40,
+                        0xF0, 0x90, 0xF0, 0x90, 0xF0,
+                        0xF0, 0x90, 0xF0, 0x10, 0xF0,
+                        0xF0, 0x90, 0xF0, 0x90, 0x90,
+                        0xE0, 0x90, 0xE0, 0x90, 0xE0,
+                        0xF0, 0x80, 0x80, 0x80, 0xF0,
+                        0xF0, 0x80, 0xF0, 0x80, 0xF0,
+                        0xF0, 0x80, 0xF0, 0x80, 0x90
+                )
+        for (i in spriteData.indices) memory[i] = spriteData[i]
     }
 
-    // TODO Correctly manage cycles per second, FPS will be locked to 60 FPS
     public fun tick() {
-        // This is the debug mode, when in debug mode the program only advances with manual stepping
-        // And every 10 steps the timers are decremented
-        // Trace mode assumes that the frequency of the machine is 600 HZ
-        // So every 10 Cycles the timers are decremented
-        if (this.traceMode) {
-            if (Gdx.app.input.isKeyJustPressed(Keys.P)) {
+        // Frequency is assumed to be locked at 600 HZ and FPS at 60, so the manual stepping as well
+        // as the normal stepping execute 10 steps before the timers (60 HZ timers) are decremented
+        if (traceMode) {
+            if (Gdx.app.input.isKeyJustPressed(Keys.P) || Gdx.app.input.isKeyPressed(Keys.O)) {
 
                 Gdx.app.debug(
                         "fetch",
                         "${fetchCurrentCommand()[0].toString(16)}${fetchCurrentCommand()[1].toString(16)}${fetchCurrentCommand()[2].toString(16)}${fetchCurrentCommand()[3].toString(16)}}"
                 )
+                Gdx.app.debug("Delay Timer", "${this.delay}")
+                Gdx.app.debug("Sound Timer", "${this.sound}")
 
                 step()
 
@@ -120,22 +111,27 @@ class Cpu constructor(val traceMode: Boolean) {
                 for (i in v.indices) Gdx.app.debug("v${i.toString(16)}", "${v[i]}")
                 Gdx.app.debug("I register", "$I")
 
-                traceStepCounter++
+                stepCounter++
 
-                if (traceStepCounter > 9) {
+                if (stepCounter > CPU_FREQUENCY / Screen.data.FPS - 1) {
                     delay--
                     sound--
-                    if (delay < 1) delay = 60
-                    if (sound < 1) sound = 60
-                    traceStepCounter = 0
+                    if (delay <= -1) delay = 60
+                    if (sound <= -1) sound = 60
+                    stepCounter = 0
                 }
             }
         } else {
 
             // for (i in 1..(CPU_FREQUENCY / Screen.data.FPS)) {
-            for (i in 1..5) {
+            for (i in 1..10) {
                 step()
             }
+            delay--
+            sound--
+            if (delay <= -1) delay = 60
+            if (sound <= -1) sound = 60
+            stepCounter = 0
         }
     }
 
@@ -161,12 +157,7 @@ class Cpu constructor(val traceMode: Boolean) {
 
                 if (third == 0xE) {
                     if (fourth == 0xE) {
-                        Gdx.app.debug("pc was ", "$pc")
-
                         pc = stack.removeAt(0)
-
-                        Gdx.app.debug("pc removed from stack and set", "$pc")
-
                         shouldIncrement = false
                     } else {
                         screen.resetPixels()
@@ -179,11 +170,7 @@ class Cpu constructor(val traceMode: Boolean) {
             }
             2 -> {
                 stack.add(0, pc + 2)
-                Gdx.app.debug("Added to the stack", "$pc")
-
                 pc = nibblesToInt(array, 3).toInt()
-                Gdx.app.debug("PC set ", "${nibblesToInt(array,3)}")
-
                 shouldIncrement = false
             }
             3 ->
@@ -251,9 +238,8 @@ class Cpu constructor(val traceMode: Boolean) {
                     when (fourth) {
                         7 -> v[second] = delay.toUByte()
                         0xA -> {
-                            // TODO Await for a key press and store it in v[second]
-                            /*While no known key is pressed, prevent program from going advancing*/
                             val key = isAnyValidKeyPressed()
+                            Gdx.app.debug("Key", "Await for a key press of ${v[second]}")
 
                             if (key != null) {
                                 for (i in keyMap.indices) if (keyMap[i] == key)
@@ -264,11 +250,11 @@ class Cpu constructor(val traceMode: Boolean) {
                         }
                         8 -> sound = v[second].toInt()
                         0xE -> I += v[second].toInt()
-                        9 ->I = (v[second] * 5u).toInt()
-                        3 ->{
+                        9 -> I = (v[second] * 5u).toInt()
+                        3 -> {
                             memory[I] = v[second].div(100u).toInt()
-                            memory[I+1] = v[second].rem(100u).div(10u).toInt()
-                            memory[I+2] = v[second].rem(10u).toInt()
+                            memory[I + 1] = v[second].rem(100u).div(10u).toInt()
+                            memory[I + 2] = v[second].rem(10u).toInt()
                         }
                         else -> {
                             when (third) {
@@ -307,14 +293,10 @@ class Cpu constructor(val traceMode: Boolean) {
         return null
     }
 
-    // Search for DXYN chip-8 instruction
     private fun drawSpriteAtXY(x: Int, y: Int, n: Int) {
         // Represents the pixel to draw
         var point =
-                Vector2Int(
-                        v[x].toInt().rem(Screen.data.COLS - 1),
-                        v[y].toInt().rem(Screen.data.ROWS - 1)
-                )
+                Vector2Int(v[x].toInt().rem(Screen.data.COLS), v[y].toInt().rem(Screen.data.ROWS))
 
         if (traceMode) {
             for (i in memory.copyOfRange(this.I, this.I + n)) Gdx.app.debug(
@@ -347,7 +329,7 @@ class Cpu constructor(val traceMode: Boolean) {
                 if (point.x >= Screen.data.COLS) break
             }
             // Reset the x coord
-            point.x = v[x].toInt().rem(Screen.data.COLS - 1)
+            point.x = v[x].toInt().rem(Screen.data.COLS)
             point.y++
 
             // If the coordinate of the pixel to set is outside of display, it stops drawing
@@ -398,21 +380,5 @@ class Cpu constructor(val traceMode: Boolean) {
         array[2] = memory.get(pc + 1).and(0xF0) shr 4
         array[3] = memory.get(pc + 1).and(0x0F)
         return array
-    }
-
-    private fun timerReset(): Timer {
-        return timer(
-                "OneSecondTimer",
-                false,
-                0,
-                1000,
-                {
-                    delay--
-                    sound--
-                    // if(sound != 0) beepSound.play()
-                    if (delay == -1) delay = 60
-                    if (sound == -1) sound = 60
-                }
-        )
     }
 }
