@@ -27,8 +27,6 @@ class Cpu(val traceMode: Boolean) {
     private var v = UByteArray(16)
     private var I = 0
 
-    private var shouldIncrement = true
-
     private var VF_FLAG_ON: UByte = 0x01u
     private var VF_CARRY_OFF: UByte = 0u
 
@@ -137,7 +135,7 @@ class Cpu(val traceMode: Boolean) {
 
     private fun step() {
         executeOpCode(fetchCurrentCommand())
-        if (shouldIncrement) pc += 2 else shouldIncrement = true
+        pc +=2
     }
 
     private fun executeOpCode(array: Array<Int>) {
@@ -150,15 +148,14 @@ class Cpu(val traceMode: Boolean) {
                 // This is not an opcode, it serves as a stopper when the program reaches invalid
                 // code
                 if (third == 0x0) {
-                    shouldIncrement = false
-
+                    pc -=2
                     return
                 }
 
                 if (third == 0xE) {
                     if (fourth == 0xE) {
                         pc = stack.removeAt(0)
-                        shouldIncrement = false
+                        pc -=2
                     } else {
                         screen.resetPixels()
                     }
@@ -166,12 +163,12 @@ class Cpu(val traceMode: Boolean) {
             }
             1 -> {
                 pc = nibblesToInt(array, 3).toInt()
-                shouldIncrement = false
+                pc -=2
             }
             2 -> {
                 stack.add(0, pc + 2)
                 pc = nibblesToInt(array, 3).toInt()
-                shouldIncrement = false
+                pc -=2
             }
             3 ->
                     if (v[second] == nibblesToInt(array, 2).toUByte()) {
@@ -221,7 +218,7 @@ class Cpu(val traceMode: Boolean) {
             0xA -> I = nibblesToInt(array, 3).toInt()
             0xB -> {
                 pc = (nibblesToInt(array, 3) + v[0]).toInt()
-                shouldIncrement = false
+                pc -= 2
             }
             0xC -> {
                 val random = Random.nextBits(8).toUInt()
