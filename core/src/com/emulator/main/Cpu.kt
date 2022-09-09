@@ -236,13 +236,13 @@ class Cpu(val traceMode: Boolean) {
                         7 -> v[second] = delay.toUByte()
                         0xA -> {
                             val key = isAnyValidKeyPressed()
-                            Gdx.app.debug("Key", "Await for a key press of ${v[second]}")
+                            // Gdx.app.debug("Key", "Await for a key press of ${v[second]}")
 
                             if (key != null) {
                                 for (i in keyMap.indices) if (keyMap[i] == key)
                                         v[second] = i.toUByte()
                             } else {
-                                shouldIncrement = false
+                                pc -= 2
                             }
                         }
                         8 -> sound = v[second].toInt()
