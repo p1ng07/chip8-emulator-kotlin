@@ -9,19 +9,21 @@ import com.badlogic.gdx.utils.ScreenUtils
 @ExperimentalUnsignedTypes
 class Chip8Emulator : ApplicationAdapter() {
 
-    private var romFileName = "roms/breakout.ch8"
+    private var romFileName = "roms/cuteTriangle.ch8"
 
-    private var cpu = Cpu(traceMode= false)
+    private var cpu: Cpu? = null
 
     override public fun create() {
-        cpu.loadRomToMemory(romFileName)
+        cpu = Cpu(traceMode = false)
+        cpu?.loadRomToMemory(romFileName)
         Gdx.app.setLogLevel(Logger.DEBUG)
+        // private var cpu = Cpu(traceMode = false)
     }
 
     override public fun render() {
         ScreenUtils.clear(Color.YELLOW)
-        cpu.tick()
-        cpu.drawScreen()
+        cpu?.tick()
+        cpu?.drawScreen()
     }
 
     override public fun dispose() {

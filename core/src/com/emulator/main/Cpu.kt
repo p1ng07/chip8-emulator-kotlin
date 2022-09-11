@@ -1,6 +1,7 @@
 package com.emulator.main
 
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.audio.Sound
 import com.badlogic.gdx.Input.Keys
 import java.io.File
 import java.util.Vector
@@ -16,8 +17,8 @@ class Cpu(val traceMode: Boolean) {
     // Number of opcodes to be executed per second (HZ)
     val CPU_FREQUENCY = 600
 
-    private var delay = 59
-    private var sound = 59
+    private var delay = 60
+    private var sound = 0
 
     private var pc = 0x200
     private var stack = Vector<Int>()
@@ -29,6 +30,7 @@ class Cpu(val traceMode: Boolean) {
     private var VF_CARRY_OFF: UByte = 0u
 
     private var screen = Screen()
+    private var beepSound = Gdx.audio.newMusic(Gdx.files.internal("beep.mp3"))
 
     // Tracing variables
     private var stepCounter = 0
@@ -108,7 +110,7 @@ class Cpu(val traceMode: Boolean) {
 
                 stepCounter++
 
-                if (stepCounter > CPU_FREQUENCY / Screen.data.FPS - 1) {
+                if (stepCounter > 9) {
                     if (delay != 0) delay--
                     if (sound != 0) sound--
                     stepCounter = 0
@@ -116,13 +118,15 @@ class Cpu(val traceMode: Boolean) {
             }
         } else {
 
-            // for (i in 1..(CPU_FREQUENCY / Screen.data.FPS)) {
             for (i in 1..10) {
                 step()
             }
-            if (delay != 0) delay--
-            if (sound != 0) sound--
-            stepCounter = 0
+
+            if (delay > 0) delay--
+            if (sound > 0){
+                if(!this.beepSound.isPlaying()) this.beepSound.play()
+                sound--
+                }
         }
     }
 
