@@ -9,7 +9,7 @@ import com.badlogic.gdx.utils.ScreenUtils
 @ExperimentalUnsignedTypes
 class Chip8Emulator : ApplicationAdapter() {
 
-    private var romFileName = "roms/cuteTriangle.ch8"
+    private var romFileName = "roms/brix.ch8"
 
     private var cpu: Cpu? = null
 

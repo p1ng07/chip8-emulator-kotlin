@@ -10,7 +10,6 @@ import kotlin.random.Random
 
 data class Vector2Int(var x: Int, var y: Int)
 
-// Handles the opcode extraction and execution, as well as simulates one cpu tick
 @ExperimentalUnsignedTypes
 class Cpu(val traceMode: Boolean) {
 
@@ -32,10 +31,8 @@ class Cpu(val traceMode: Boolean) {
     private var screen = Screen()
     private var beepSound = Gdx.audio.newMusic(Gdx.files.internal("beep.mp3"))
 
-    // Tracing variables
     private var stepCounter = 0
 
-    // Maps<Original Key, Mapped key> the chip 8 keys to actual keyboard Keys
     // Original keys:
     // 1 2 3 C
     // 4 5 6 D
@@ -136,21 +133,17 @@ class Cpu(val traceMode: Boolean) {
     }
 
     private fun executeOpCode(array: Array<Int>) {
-        val first = array[0]
-        val second = array[1]
-        val third = array[2]
-        val fourth = array[3]
-        when (first) {
-            0 -> {
-                // This is not an opcode, it serves as a stopper when the program reaches invalid
-                // code
-                if (third == 0x0) {
-                    pc -=2
-                    return
-                }
+        val x = array[1]
+        val y = array[2]
+        val kk = nibblesToInt(array, 2).toUByte()
+        val nnn = nibblesToInt(array, 3).toInt()
+        val n = array[3]
 
-                if (third == 0xE) {
-                    if (fourth == 0xE) {
+        when (array[0]) {
+            0 -> {
+                if (y == 0x0) pc -=2
+                else if (y == 0xE) {
+                    if (n == 0xE) {
                         pc = stack.removeAt(0)
                         pc -=2
                     } else {
@@ -159,110 +152,103 @@ class Cpu(val traceMode: Boolean) {
                 }
             }
             1 -> {
-                pc = nibblesToInt(array, 3).toInt()
+                pc = nnn
                 pc -=2
             }
             2 -> {
                 stack.add(0, pc + 2)
-                pc = nibblesToInt(array, 3).toInt()
+                pc = nnn
                 pc -=2
             }
             3 ->
-                    if (v[second] == nibblesToInt(array, 2).toUByte()) {
+                    if (v[x] == kk) {
                         pc += 2
                     }
             4 ->
-                    if (v[second].toUInt() != nibblesToInt(array, 2)) {
+                    if (v[x] != kk) {
                         pc += 2
                     }
             5 ->
-                    if (v[second] == v[third]) {
+                    if (v[x] == v[y]) {
                         pc += 2
                     }
-            6 -> v[second] = nibblesToInt(array, 2).toUByte()
-            7 -> v[second] = (v[second] + nibblesToInt(array, 2)).toUByte()
+            6 -> v[x] = kk
+            7 -> v[x] = (v[x] + kk).toUByte()
             8 ->
-                    when (fourth) {
-                        0 -> v[second] = v[third]
-                        1 -> v[second] = v[second].or(v[third])
-                        2 -> v[second] = v[second].and(v[third])
-                        3 -> v[second] = v[second].xor(v[third])
+                    when (n) {
+                        0 -> v[x] = v[y]
+                        1 -> v[x] = v[x].or(v[y])
+                        2 -> v[x] = v[x].and(v[y])
+                        3 -> v[x] = v[x].xor(v[y])
                         4 -> {
-                            if (v[second] + v[third] > 255u) v[15] = VF_FLAG_ON
-                            v[second] = (v[second] + v[third]).toUByte()
+                            if (v[x] + v[y] > 255u) v[15] = VF_FLAG_ON
+                            v[x] = (v[x] + v[y]).toUByte()
                         }
                         5 -> {
-                            v[15] = if (v[second] > v[third]) VF_FLAG_ON else VF_CARRY_OFF
-                            v[second] = (v[second] - v[third]).toUByte()
+                            v[15] = if (v[x] > v[y]) VF_FLAG_ON else VF_CARRY_OFF
+                            v[x] = (v[x] - v[y]).toUByte()
                         }
                         6 -> {
-                            v[15] = if (v[second].rem(2u).equals(1)) VF_FLAG_ON else VF_CARRY_OFF
-                            v[second] = v[second].div(2u).toUByte()
+                            v[15] = if (v[x].rem(2u).equals(1)) VF_FLAG_ON else VF_CARRY_OFF
+                            v[x] = v[x].div(2u).toUByte()
                         }
                         7 -> {
-                            v[15] = if (v[third] > v[second]) VF_FLAG_ON else VF_CARRY_OFF
-                            v[second] = (v[third] - v[second]).toUByte()
+                            v[15] = if (v[y] > v[x]) VF_FLAG_ON else VF_CARRY_OFF
+                            v[x] = (v[y] - v[x]).toUByte()
                         }
                         0xe -> {
-                            v[15] = if (v[second] >= 128u) VF_FLAG_ON else VF_CARRY_OFF
-                            v[second] = v[second].times(2u).toUByte()
+                            v[15] = if (v[x] >= 128u) VF_FLAG_ON else VF_CARRY_OFF
+                            v[x] = v[x].times(2u).toUByte()
                         }
                     }
             9 ->
-                    if (v[second].toInt() != v[third].toInt()) {
+                    if (v[x].toInt() != v[y].toInt()) {
                         pc += 2
                     }
-            0xA -> I = nibblesToInt(array, 3).toInt()
+            0xA -> I = nnn
             0xB -> {
                 pc = (nibblesToInt(array, 3) + v[0]).toInt()
                 pc -= 2
             }
             0xC -> {
                 val random = Random.nextBits(8).toUInt()
-                v[second] = (nibblesToInt(array, 2).and(random)).toUByte()
+                v[x] = (nibblesToInt(array, 2).and(random)).toUByte()
             }
-            0xD -> drawSpriteAtXY(second, third, fourth)
+            0xD -> drawSpriteAtXY(x, y, n)
             0xE -> {
-                when (fourth) {
-                    0x1 -> if (!Gdx.input.isKeyPressed(keyMap[v[second].toInt()])) pc += 2
-                    0xE -> if (Gdx.input.isKeyPressed(keyMap[v[second].toInt()])) pc += 2
+                when (n) {
+                    0x1 -> if (!Gdx.input.isKeyPressed(keyMap[v[x].toInt()])) pc += 2
+                    0xE -> if (Gdx.input.isKeyPressed(keyMap[v[x].toInt()])) pc += 2
                 }
             }
             0xF ->
-                    when (fourth) {
-                        7 -> v[second] = delay.toUByte()
+                    when (n) {
+                        7 -> v[x] = delay.toUByte()
                         0xA -> {
                             val key = isAnyValidKeyPressed()
-                            // Gdx.app.debug("Key", "Await for a key press of ${v[second]}")
-
                             if (key != null) {
                                 for (i in keyMap.indices) if (keyMap[i] == key)
-                                        v[second] = i.toUByte()
+                                        v[x] = i.toUByte()
                             } else {
                                 pc -= 2
                             }
                         }
-                        8 -> sound = v[second].toInt()
-                        0xE -> I += v[second].toInt()
-                        9 -> I = (v[second] * 5u).toInt()
+                        8 -> sound = v[x].toInt()
+                        0xE -> I += v[x].toInt()
+                        9 -> I = (v[x] * 5u).toInt()
                         3 -> {
-                            memory[I] = v[second].div(100u).toInt()
-                            memory[I + 1] = v[second].rem(100u).div(10u).toInt()
-                            memory[I + 2] = v[second].rem(10u).toInt()
+                            memory[I] = v[x].div(100u).toInt()
+                            memory[I + 1] = v[x].rem(100u).div(10u).toInt()
+                            memory[I + 2] = v[x].rem(10u).toInt()
                         }
                         else -> {
-                            when (third) {
-                                1 -> delay = v[second].toInt()
-                                5 -> for (i in 0..second) memory[I + i] = v[i].toInt()
-                                6 -> for (i in 0..second) v[i] = memory[I + i].toUByte()
+                            when (y) {
+                                1 -> delay = v[x].toInt()
+                                5 -> for (i in 0..x) memory[I + i] = v[i].toInt()
+                                6 -> for (i in 0..x) v[i] = memory[I + i].toUByte()
                             }
                         }
                     }
-            else ->
-                    Gdx.app.log(
-                            "ERROR",
-                            "Unknown instruction: ${first.toString(16)}${second.toString(16)}${third.toString(16)}${fourth.toString(16)}}"
-                    )
         }
     }
 
@@ -288,7 +274,6 @@ class Cpu(val traceMode: Boolean) {
     }
 
     private fun drawSpriteAtXY(x: Int, y: Int, n: Int) {
-        // Represents the pixel to draw
         var point =
                 Vector2Int(v[x].toInt().rem(Screen.data.COLS), v[y].toInt().rem(Screen.data.ROWS))
 
@@ -331,7 +316,6 @@ class Cpu(val traceMode: Boolean) {
         }
     }
 
-    // Independent function that draws the screen
     public fun drawScreen() {
         screen.draw()
     }
@@ -343,9 +327,6 @@ class Cpu(val traceMode: Boolean) {
     }
 
     private fun nibblesToInt(array: Array<Int>, n: Int, startIndex: Int = 3): UInt {
-
-        if (startIndex > 3 || startIndex < 0) throw Exception("Nibbles to int use was invalid")
-        if (startIndex - n + 1 < 0) throw Exception("Nibbles to int use was invalid")
 
         var res = 0u
         for (i in startIndex downTo startIndex - n + 1) {
