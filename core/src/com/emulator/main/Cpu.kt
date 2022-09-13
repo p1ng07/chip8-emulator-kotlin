@@ -13,9 +13,8 @@ data class Vector2Int(var x: Int, var y: Int)
 @ExperimentalUnsignedTypes
 class Cpu(val traceMode: Boolean) {
 
-    // Number of opcodes to be executed per second (HZ)
-    val CPU_FREQUENCY = 600
-
+    private var FREQUENCY = 600
+    private var cyclesPerFrame = calculateCyclePerFrame()
     private var delay = 60
     private var sound = 0
 
@@ -46,6 +45,7 @@ class Cpu(val traceMode: Boolean) {
     private var keyMap = IntArray(16, { _ -> 0 })
 
     init {
+        println("${this.cyclesPerFrame}")
         keyMap[0] = Keys.X
         keyMap[1] = Keys.NUM_1
         keyMap[2] = Keys.NUM_2
@@ -86,9 +86,9 @@ class Cpu(val traceMode: Boolean) {
     }
 
     public fun tick() {
-        // Frequency is assumed to be locked at 600 HZ and FPS at 60, so the manual stepping as well
-        // as the normal stepping execute 10 steps before the timers (60 HZ timers) are decremented
         if (traceMode) {
+        // Frequency is assumed to be locked at 600 HZ and FPS at 60 when in trace mode, so the manual stepping
+        // executes 10 steps before the timers (60 HZ timers) are decremented
             if (Gdx.app.input.isKeyJustPressed(Keys.P) || Gdx.app.input.isKeyPressed(Keys.O)) {
 
                 Gdx.app.debug(
@@ -115,7 +115,7 @@ class Cpu(val traceMode: Boolean) {
             }
         } else {
 
-            for (i in 1..10) {
+            for (i in 1..cyclesPerFrame) {
                 step()
             }
 
@@ -353,5 +353,8 @@ class Cpu(val traceMode: Boolean) {
         array[2] = memory.get(pc + 1).and(0xF0) shr 4
         array[3] = memory.get(pc + 1).and(0x0F)
         return array
+    }
+    private fun calculateCyclePerFrame(): Int{
+        return ((1.0f/Screen.data.FPS)/(1.0f/FREQUENCY.toFloat())).roundToInt()
     }
 }
